@@ -1,0 +1,12 @@
+[package]
+name = "serde_bencode"
+description = "A Serde backed Bencode encoding/decoding library for Rust."
+version = "0.1.0"
+authors = ["Toby Padilla <tobypadilla@gmail.com>"]
+repository = "https://github.com/toby/serde-bencode"
+license = "MIT"
+keywords = ["bencode", "serialize", "deserialize", "serde"]
+
+[dependencies]
+serde = "0.8.19"
+serde_derive = "0.8.19"
