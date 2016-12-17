@@ -8,8 +8,8 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-serde = "0.8.19"
-serde_derive = "0.8.19"
+serde = "0.8"
+serde_derive = "0.8"
 serde_bencode = "0.1.0"
 ```
 
