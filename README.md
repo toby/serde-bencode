@@ -10,7 +10,7 @@ Add the following to your `Cargo.toml`:
 [dependencies]
 serde = "0.8"
 serde_derive = "0.8"
-serde_bencode = "0.1.0"
+serde_bencode = "0.1.1"
 ```
 
 Serde works best with Rust nightly, it is highly recommended that you use
