@@ -5,15 +5,6 @@ use serde::de::{Deserializer, Deserialize, Visitor, VariantVisitor, SeqVisitor, 
                 EnumVisitor, Error};
 use error::BencodeError;
 
-macro_rules! forward_deserialize {
-    ($($name:ident($($arg:ident: $ty:ty,)*);)*) => {
-        $(#[inline]
-        fn $name<V: Visitor>(&mut self, $($arg: $ty,)* visitor: V) -> Result<V::Value> {
-            self.deserialize(visitor)
-        })*
-    }
-}
-
 pub type Result<T> = result::Result<T, BencodeError>;
 
 pub struct BencodeVisitor<'a, R: 'a + Read> {
@@ -239,34 +230,11 @@ impl<R: Read> Deserializer for BencodeDecoder<R> {
         }
     }
 
-    forward_deserialize!(
-        deserialize_i64();
-        deserialize_string();
-        deserialize_seq();
-        deserialize_seq_fixed_size(_len: usize,);
-        deserialize_bool();
-        deserialize_isize();
-        deserialize_i8();
-        deserialize_i16();
-        deserialize_i32();
-        deserialize_usize();
-        deserialize_u8();
-        deserialize_u16();
-        deserialize_u32();
-        deserialize_u64();
-        deserialize_f32();
-        deserialize_f64();
-        deserialize_char();
-        deserialize_str();
-        deserialize_unit();
-        deserialize_bytes();
-        deserialize_map();
-        deserialize_unit_struct(_name: &'static str,);
-        deserialize_tuple_struct(_name: &'static str, _len: usize,);
-        deserialize_tuple(_len: usize,);
-        deserialize_newtype_struct(_name: &'static str,);
-        deserialize_ignored_any();
-    );
+    forward_to_deserialize! {
+        i64 string seq seq_fixed_size bool isize i8 i16 i32 usize u8 u16 u32
+        u64 f32 f64 char str unit bytes map unit_struct tuple_struct tuple
+        newtype_struct ignored_any
+    }
 
     #[inline]
     fn deserialize_option<V:Visitor>(&mut self, visitor: V) -> Result<V::Value> {
