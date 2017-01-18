@@ -256,9 +256,7 @@ impl Serializer for Encoder {
         self.serialize_struct(name, len)
     }
     fn serialize_struct_variant_elt<V: Serialize>(&mut self, _state: &mut Self::StructVariantState, key: &'static str, value: V) -> Result<(), Self::Error> {
-        key.serialize(self).unwrap();
-        value.serialize(self).unwrap();
-        Ok(())
+        self.serialize_struct_elt(&mut (), key, value)
     }
     fn serialize_struct_variant_end(&mut self, _state: Self::StructVariantState) -> Result<(), Self::Error> {
         self.serialize_struct_end(())
