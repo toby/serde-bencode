@@ -349,3 +349,17 @@ fn readme_bencode_example() {
     let list_serialize: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(list_serialize).unwrap(), "l3:one3:two5:threei4ee");
 }
+
+#[test]
+fn struct_none_vals() {
+    #[derive(Serialize)]
+    struct Fake {
+        a: Option<i32>,
+        b: Option<i32>
+    };
+    let f = Fake { a: None, b: Some(1) };
+    let mut ser = Encoder::new();
+    f.serialize(&mut ser).unwrap();
+    let r: Vec<u8> = ser.into();
+    assert_eq!(String::from_utf8(r).unwrap(), "d1:bi1ee");
+}
