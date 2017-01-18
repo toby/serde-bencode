@@ -1,5 +1,3 @@
-#![feature(proc_macro)]
-
 extern crate serde_bencode;
 extern crate serde;
 #[macro_use]
