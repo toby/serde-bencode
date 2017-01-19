@@ -60,8 +60,10 @@ impl Encoder {
             m.sort();
             self.new_context();
             for c in m.iter() {
-                self.push(&c[0]);
-                self.push(&c[1]);
+                if c[1].len() > 2 {
+                    self.push(&c[0]);
+                    self.push(&c[1]);
+                }
             }
         }
     }
@@ -177,7 +179,7 @@ impl Serializer for Encoder {
         value.serialize(self)
     }
     fn serialize_none(&mut self) -> Result<(), Self::Error> {
-        Ok(())
+        self.serialize_bytes("".as_bytes())
     }
     fn serialize_some<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error> {
         value.serialize(self)
