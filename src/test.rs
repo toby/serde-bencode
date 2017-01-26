@@ -322,6 +322,15 @@ fn serialize_some() {
 }
 
 #[test]
+fn serialize_none() {
+    let f: Option<Bencode> = None;
+    let mut ser = Encoder::new();
+    f.serialize(&mut ser).unwrap();
+    let r: Vec<u8> = ser.into();
+    assert_eq!(String::from_utf8(r).unwrap(), "");
+}
+
+#[test]
 fn serialize_tuple() {
     let f = (1,2,3,"one");
     let mut ser = Encoder::new();

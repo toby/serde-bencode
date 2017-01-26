@@ -179,7 +179,8 @@ impl Serializer for Encoder {
         value.serialize(self)
     }
     fn serialize_none(&mut self) -> Result<(), Self::Error> {
-        self.serialize_bytes("".as_bytes())
+        self.push("".as_bytes());
+        Ok(())
     }
     fn serialize_some<T: Serialize>(&mut self, value: T) -> Result<(), Self::Error> {
         value.serialize(self)
