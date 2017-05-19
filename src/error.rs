@@ -1,9 +1,10 @@
 use std::fmt;
+use std::fmt::Display;
 use std::error::Error as StdError;
 use std::io::Error as IoError;
 use serde::ser::Error as SerError;
 use serde::de::Error as DeError;
-use serde::de::Type;
+use serde::de::{Unexpected, Expected};
 
 #[derive(Debug)]
 pub enum BencodeError {
@@ -20,50 +21,42 @@ pub enum BencodeError {
 }
 
 impl SerError for BencodeError {
-    fn custom<T: Into<String>>(msg: T) -> Self {
-        BencodeError::Custom(msg.into())
-    }
-
-    fn invalid_value(msg: &str) -> Self {
-        BencodeError::InvalidValue(msg.into())
+    fn custom<T: Display>(msg: T) -> Self {
+        BencodeError::Custom(msg.to_string())
     }
 }
 
 impl DeError for BencodeError {
-    fn custom<T: Into<String>>(msg: T) -> Self {
-        BencodeError::Custom(msg.into())
+    fn custom<T: Display>(msg: T) -> Self {
+        BencodeError::Custom(msg.to_string())
     }
 
-    fn end_of_stream() -> Self {
-        BencodeError::EndOfStream
+    fn invalid_type(unexp: Unexpected, exp: &Expected) -> Self {
+        BencodeError::InvalidType(format!("Invalid Type: {} (expected: `{}`)", unexp, exp))
     }
 
-    fn invalid_type(ty: Type) -> Self {
-        BencodeError::InvalidType(format!("Invalid Type: {:?}", ty))
+    fn invalid_value(unexp: Unexpected, exp: &Expected) -> Self {
+        BencodeError::InvalidValue(format!("Invalid Value: {} (expected: `{}`)", unexp, exp))
     }
 
-    fn invalid_value(msg: &str) -> Self {
-        BencodeError::InvalidValue(format!("Invalid Value: {}", msg))
+    fn invalid_length(len: usize, exp: &Expected) -> Self {
+        BencodeError::InvalidLength(format!("Invalid Length: {} (expected: {})", len, exp))
     }
 
-    fn invalid_length(len: usize) -> Self {
-        BencodeError::InvalidLength(format!("Invalid Length: {}", len))
+    fn unknown_variant(field: &str, expected: &'static [&'static str]) -> Self {
+        BencodeError::UnknownVariant(format!("Unknown Variant: `{}` (expected one of: {:?})", field, expected))
     }
 
-    fn unknown_variant(field: &str) -> Self {
-        BencodeError::UnknownVariant(format!("Unknown Variant: {}", field))
-    }
-
-    fn unknown_field(field: &str) -> Self {
-        BencodeError::UnknownField(format!("Unknown Field: {}", field))
+    fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
+        BencodeError::UnknownField(format!("Unknown Field: `{}` (expected one of: {:?})", field, expected))
     }
 
     fn missing_field(field: &'static str) -> Self {
-        BencodeError::MissingField(format!("Missing Field: {}", field))
+        BencodeError::MissingField(format!("Missing Field: `{}`", field))
     }
 
     fn duplicate_field(field: &'static str) -> Self {
-        BencodeError::DuplicateField(format!("Duplicat Field: {}", field))
+        BencodeError::DuplicateField(format!("Duplicat Field: `{}`", field))
     }
 }
 

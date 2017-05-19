@@ -1,8 +1,7 @@
 use std::io::Read;
 use std::result;
 use std::str;
-use serde::de::{Deserializer, Deserialize, Visitor, VariantVisitor, SeqVisitor, MapVisitor,
-                EnumVisitor, Error};
+use serde::de::{Deserializer, Deserialize, DeserializeSeed, Visitor, VariantVisitor, SeqVisitor, MapVisitor, EnumVisitor};
 use error::BencodeError;
 
 pub type Result<T> = result::Result<T, BencodeError>;
@@ -20,23 +19,19 @@ impl <'a, R: 'a + Read> BencodeVisitor<'a, R> {
 impl<'a, R: 'a + Read> VariantVisitor for BencodeVisitor<'a, R> {
     type Error = BencodeError;
 
-    fn visit_variant<T: Deserialize>(&mut self) -> Result<T> {
-        T::deserialize(self.de)
+    fn visit_newtype_seed<T: DeserializeSeed>(self, seed: T) -> Result<T::Value> {
+        seed.deserialize(self.de)
     }
 
-    fn visit_newtype<T: Deserialize>(&mut self) -> Result<T> {
-        T::deserialize(self.de)
-    }
-
-    fn visit_unit(&mut self) -> Result<()> {
+    fn visit_unit(self) -> Result<()> {
         Err(BencodeError::UnknownVariant("Unit variant not supported.".into()))
     }
 
-    fn visit_tuple<V: Visitor>(&mut self, _: usize, _: V) -> Result<V::Value> {
+    fn visit_tuple<V: Visitor>(self, _: usize, _: V) -> Result<V::Value> {
         Err(BencodeError::UnknownVariant("Tuple variant not supported.".into()))
     }
 
-    fn visit_struct<V: Visitor>(&mut self, _: &'static [&'static str], _: V) -> Result<V::Value> {
+    fn visit_struct<V: Visitor>(self, _: &'static [&'static str], _: V) -> Result<V::Value> {
         Err(BencodeError::UnknownVariant("Struct variant not supported.".into()))
     }
 }
@@ -44,20 +39,16 @@ impl<'a, R: 'a + Read> VariantVisitor for BencodeVisitor<'a, R> {
 impl<'a, R: 'a + Read> SeqVisitor for BencodeVisitor<'a, R> {
     type Error = BencodeError;
 
-    fn visit<T>(&mut self) -> Result<Option<T>>
-        where T: Deserialize
-    {
+    fn visit_seed<T: DeserializeSeed>(&mut self, seed: T) -> Result<Option<T::Value>> {
         self.de.update_state();
-        match T::deserialize(self.de) {
+        match seed.deserialize(&mut *self.de) {
             Ok(v) => Ok(Some(v)),
-            _ => Ok(None),
+            Err(_) => {
+                self.de.state.pop();
+                Ok(None)
+            }
         }
     }
-    fn end(&mut self) -> Result<()> {
-        self.de.state.pop();
-        Ok(())
-    }
-
     fn size_hint(&self) -> (usize, Option<usize>) {
         (1, None)
     }
@@ -65,30 +56,36 @@ impl<'a, R: 'a + Read> SeqVisitor for BencodeVisitor<'a, R> {
 
 impl<'a, R: 'a + Read> MapVisitor for BencodeVisitor<'a, R> {
     type Error = BencodeError;
-    fn visit_key<K>(&mut self) -> Result<Option<K>>
-        where K: Deserialize
+    fn visit_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
+        where K: DeserializeSeed
     {
-        if self.de.state.last() != Some(&State::E) {
-            self.de.update_state();
-            match K::deserialize(self.de) {
-                Ok(v) => Ok(Some(v)),
-                _ => Ok(None),
-            }
-        } else {
-            Ok(None)
+        if self.de.state.last() == Some(&State::E) {
+            return Ok(None);
+        }
+        self.de.update_state();
+        match seed.deserialize(&mut *self.de) {
+            Ok(v) => Ok(Some(v)),
+            Err(_) => {
+                self.de.state.pop();
+                Ok(None)
+            },
         }
     }
 
-    fn visit_value<V>(&mut self) -> Result<V>
-        where V: Deserialize
+    fn visit_value_seed<V>(&mut self, seed: V) -> Result<V::Value>
+        where V: DeserializeSeed
     {
         self.de.update_state();
-        V::deserialize(self.de)
+        seed.deserialize(&mut *self.de)
     }
+}
 
-    fn end(&mut self) -> Result<()> {
-        self.de.state.pop();
-        Ok(())
+impl<'a, R: 'a + Read> EnumVisitor for BencodeVisitor<'a, R> {
+    type Error = BencodeError;
+    type Variant = Self;
+    fn visit_variant_seed<V: DeserializeSeed>(self, seed: V) -> Result<(V::Value, Self)> {
+        let res = seed.deserialize(&mut *self.de)?;
+        Ok((res, self))
     }
 }
 
@@ -127,14 +124,14 @@ impl<R: Read> BencodeDecoder<R> {
                 Ok("e") => {
                     return match result.parse::<i64>() {
                         Ok(i) => Ok(State::I(i)),
-                        _ => Err(Error::invalid_value(&result)),
+                        Err(_) => Err(BencodeError::InvalidValue(format!("Can't parse `{}` as i64", result))),
                     }
                 }
                 Ok(c) => result.push_str(&c),
-                _ => return Err(Error::invalid_value("Non UTF-8 integer encoding")),
+                Err(_) => return Err(BencodeError::InvalidValue("Non UTF-8 integer encoding".to_string())),
             }
         }
-        Err(Error::end_of_stream())
+        Err(BencodeError::EndOfStream)
     }
 
     fn parse_byte_string_body(&mut self, len: i64) -> Result<Vec<u8>> {
@@ -160,16 +157,16 @@ impl<R: Read> BencodeDecoder<R> {
                                 ":" => {
                                     match len.parse::<i64>() {
                                         Ok(len) => return Ok(len),
-                                        _ => return Err(Error::invalid_value(&len)),
+                                        Err(_) => return Err(BencodeError::InvalidValue(format!("Can't parse `{}` as string length", len))),
                                     }
                                 }
                                 n => len.push_str(n),
                             }
                         }
-                        Err(_) => return Err(Error::invalid_value("Non UTF-8 string length encoding")),
+                        Err(_) => return Err(BencodeError::InvalidValue("Non UTF-8 integer encoding".to_string())),
                     }
                 }
-                _ => return Err(Error::end_of_stream()),
+                _ => return Err(BencodeError::EndOfStream),
             }
         }
     }
@@ -193,10 +190,10 @@ impl<R: Read> BencodeDecoder<R> {
                 'e' => Ok(State::E),
                 'i' => self.parse_int(),
                 n @ '0' ... '9' => self.parse_byte_string(n),
-                _ => Err(Error::end_of_stream()),
+                _ => Err(BencodeError::EndOfStream),
             }
         } else {
-            Err(Error::end_of_stream())
+            Err(BencodeError::EndOfStream)
         }
     }
 
@@ -208,11 +205,11 @@ impl<R: Read> BencodeDecoder<R> {
     }
 }
 
-impl<R: Read> Deserializer for BencodeDecoder<R> {
+impl<'a, R: Read> Deserializer for &'a mut BencodeDecoder<R> {
     type Error = BencodeError;
 
     #[inline]
-    fn deserialize<V: Visitor>(&mut self, mut visitor: V) -> Result<V::Value> {
+    fn deserialize<V: Visitor>(mut self, visitor: V) -> Result<V::Value> {
         if self.state.last() == None {
             self.update_state();
         }
@@ -223,21 +220,21 @@ impl<R: Read> Deserializer for BencodeDecoder<R> {
             match self.state.pop() {
                 Some(State::I(i)) => visitor.visit_i64(i),
                 Some(State::S(s)) => visitor.visit_byte_buf(s),
-                Some(State::L) => visitor.visit_seq(BencodeVisitor::new(self)),
-                Some(State::D) => visitor.visit_map(BencodeVisitor::new(self)),
-                _ => Err(Error::end_of_stream()),
+                Some(State::L) => visitor.visit_seq(BencodeVisitor::new(&mut self)),
+                Some(State::D) => visitor.visit_map(BencodeVisitor::new(&mut self)),
+                _ => Err(BencodeError::EndOfStream),
             }
         }
     }
 
     forward_to_deserialize! {
-        i64 string seq seq_fixed_size bool isize i8 i16 i32 usize u8 u16 u32
-        u64 f32 f64 char str unit bytes map unit_struct tuple_struct tuple
+        i64 string seq seq_fixed_size bool i8 i16 i32 u8 u16 u32
+        u64 f32 f64 char str unit bytes byte_buf map unit_struct tuple_struct tuple
         newtype_struct ignored_any
     }
 
     #[inline]
-    fn deserialize_option<V:Visitor>(&mut self, visitor: V) -> Result<V::Value> {
+    fn deserialize_option<V:Visitor>(self, visitor: V) -> Result<V::Value> {
         self.is_option = true;
         if self.state.last() == None {
             self.update_state();
@@ -246,7 +243,7 @@ impl<R: Read> Deserializer for BencodeDecoder<R> {
     }
 
     #[inline]
-    fn deserialize_struct<V: Visitor>(&mut self, _name: &'static str, _fields: &'static [&'static str], mut visitor: V) -> Result<V::Value> {
+    fn deserialize_struct<V: Visitor>(self, _name: &'static str, _fields: &'static [&'static str], visitor: V) -> Result<V::Value> {
         self.is_struct = true;
         if self.state.last() == None {
             self.update_state();
@@ -255,11 +252,11 @@ impl<R: Read> Deserializer for BencodeDecoder<R> {
     }
 
     #[inline]
-    fn deserialize_struct_field<V: Visitor>(&mut self, mut visitor: V) -> Result<V::Value> {
+    fn deserialize_struct_field<V: Visitor>(self, visitor: V) -> Result<V::Value> {
         if self.is_struct {
             match self.state.last() {
                 Some(&State::S(ref b)) => visitor.visit_bytes(b),
-                _ => Err(Error::end_of_stream()),
+                _ => Err(BencodeError::EndOfStream),
             }
         } else {
             self.is_struct = true;
@@ -268,22 +265,22 @@ impl<R: Read> Deserializer for BencodeDecoder<R> {
                 Some(&State::S(_)) => visitor.visit_str("ByteString"),
                 Some(&State::D) => visitor.visit_str("Dict"),
                 Some(&State::L) => visitor.visit_str("List"),
-                _ => Err(Error::end_of_stream()),
+                _ => Err(BencodeError::EndOfStream),
             }
         }
     }
 
     #[inline]
-    fn deserialize_enum<V: EnumVisitor>(&mut self,
+    fn deserialize_enum<V: Visitor>(self,
                                         _enum: &'static str,
                                         _variants: &'static [&'static str],
-                                        mut visitor: V)
+                                        visitor: V)
                                         -> Result<V::Value> {
         self.is_struct = false;
         if self.state.last() == None {
             self.update_state();
         }
-        visitor.visit(BencodeVisitor::new(self))
+        visitor.visit_enum(BencodeVisitor::new(self))
     }
 }
 
@@ -296,6 +293,5 @@ pub fn from_str<T>(s: &str) -> Result<T>
 pub fn from_bytes<T>(b: &[u8]) -> Result<T>
     where T: Deserialize
 {
-    let mut d = BencodeDecoder::new(b);
-    Deserialize::deserialize(&mut d)
+    Deserialize::deserialize(&mut BencodeDecoder::new(b))
 }
