@@ -15,7 +15,7 @@ fn encode<T: Serialize>(b: &T) -> Vec<u8> {
     ser.into()
 }
 
-fn decode_bytes<T: Deserialize + Debug>(b: &[u8]) -> Option<T> {
+fn decode_bytes<'de, T: Deserialize<'de> + Debug>(b: &'de [u8]) -> Option<T> {
     match decoder::from_bytes(b) {
         Ok(r) => Some(r),
         Err(e) => {

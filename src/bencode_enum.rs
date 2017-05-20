@@ -1,4 +1,4 @@
-use serde::bytes::ByteBuf;
+use serde_bytes::ByteBuf;
 use std::collections::BTreeMap;
 
 #[derive(PartialOrd, Eq, Ord, PartialEq, Clone, Debug, Serialize, Deserialize)]

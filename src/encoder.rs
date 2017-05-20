@@ -247,13 +247,13 @@ impl<'a> Serializer for &'a mut Encoder {
     fn serialize_unit_struct(self, _name: &'static str) -> Result<(), Self::Error> {
         self.serialize_unit()
     }
-    fn serialize_unit_variant(self, _name: &'static str, _variant_index: usize, _variant: &'static str) -> Result<(), Self::Error> {
+    fn serialize_unit_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str) -> Result<(), Self::Error> {
         Err(BencodeError::UnknownVariant("Unit variant not supported.".to_string()))
     }
     fn serialize_newtype_struct<T: ?Sized + Serialize>(self, _name: &'static str, value: &T) -> Result<(), Self::Error> {
         value.serialize(self)
     }
-    fn serialize_newtype_variant<T: ?Sized + Serialize>(self, _name: &'static str, _variant_index: usize, _variant: &'static str, value: &T) -> Result<(), Self::Error> {
+    fn serialize_newtype_variant<T: ?Sized + Serialize>(self, _name: &'static str, _variant_index: u32, _variant: &'static str, value: &T) -> Result<(), Self::Error> {
         value.serialize(self)
     }
     fn serialize_none(self) -> Result<(), Self::Error> {
@@ -268,16 +268,16 @@ impl<'a> Serializer for &'a mut Encoder {
         self.push("l".as_bytes());
         Ok(self)
     }
-    fn serialize_seq_fixed_size(self, size: usize) -> Result<Self, Self::Error> {
-        self.serialize_seq(Some(size))
-    }
+    // fn serialize_seq_fixed_size(self, size: usize) -> Result<Self, Self::Error> {
+    //     self.serialize_seq(Some(size))
+    // }
     fn serialize_tuple(self, size: usize) -> Result<Self, Self::Error> {
         self.serialize_seq(Some(size))
     }
     fn serialize_tuple_struct(self, _name: &'static str, len: usize) -> Result<Self, Self::Error> {
         self.serialize_seq(Some(len))
     }
-    fn serialize_tuple_variant(self, _name: &'static str, _variant_index: usize, _variant: &'static str, _len: usize) -> Result<Self, Self::Error> {
+    fn serialize_tuple_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self, Self::Error> {
         Err(BencodeError::UnknownVariant("Tuple variant not supported.".to_string()))
     }
     fn serialize_map(self, _len: Option<usize>) -> Result<Self, Self::Error> {
@@ -287,7 +287,7 @@ impl<'a> Serializer for &'a mut Encoder {
     fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self, Self::Error> {
         self.serialize_map(Some(len))
     }
-    fn serialize_struct_variant(self, _name: &'static str, _variant_index: usize, _variant: &'static str, _len: usize) -> Result<Self, Self::Error> {
+    fn serialize_struct_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self, Self::Error> {
         Err(BencodeError::UnknownVariant("Struct variant not supported.".to_string()))
     }
 }

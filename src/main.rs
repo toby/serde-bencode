@@ -2,10 +2,11 @@ extern crate serde_bencode;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_bytes;
 
 use serde_bencode::decoder;
 use std::io::{self, Read};
-use serde::bytes::ByteBuf;
+use serde_bytes::ByteBuf;
 
 #[derive(Debug, Deserialize)]
 struct Node(String, i64);
