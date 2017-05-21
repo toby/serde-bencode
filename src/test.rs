@@ -1,5 +1,5 @@
 use bencode_enum::Bencode;
-use decoder;
+use de;
 use encoder::Encoder;
 use error::BencodeError;
 use serde::ser::Serialize;
@@ -16,7 +16,7 @@ fn encode<T: Serialize>(b: &T) -> Vec<u8> {
 }
 
 fn decode_bytes<'de, T: Deserialize<'de> + Debug>(b: &'de [u8]) -> Option<T> {
-    match decoder::from_bytes(b) {
+    match de::from_bytes(b) {
         Ok(r) => Some(r),
         Err(e) => {
             println!("Error: {:?}", e);
@@ -26,7 +26,7 @@ fn decode_bytes<'de, T: Deserialize<'de> + Debug>(b: &'de [u8]) -> Option<T> {
 }
 
 fn decode_enum(s: &String) -> Option<Bencode> {
-    match decoder::from_str(&s.as_str()) {
+    match de::from_str(&s.as_str()) {
         Ok(r) => Some(r),
         _ => None,
     }
@@ -128,7 +128,7 @@ fn serialize_bool() {
 #[test]
 fn deserialize_to_string() {
     let s = "3:yes";
-    let r: Result<String, BencodeError> = decoder::from_str(&s);
+    let r: Result<String, BencodeError> = de::from_str(&s);
     match r {
         Ok(v) => assert_eq!(v, "yes"),
         _ => panic!(),
@@ -138,7 +138,7 @@ fn deserialize_to_string() {
 #[test]
 fn deserialize_to_i64() {
     let s = "i666e";
-    let r: Result<i64, BencodeError> = decoder::from_str(&s);
+    let r: Result<i64, BencodeError> = de::from_str(&s);
     match r {
         Ok(v) => assert_eq!(v, 666),
         _ => panic!(),
@@ -148,7 +148,7 @@ fn deserialize_to_i64() {
 #[test]
 fn deserialize_to_vec() {
     let s = "li666ee";
-    let r: Result<Vec<i64>, BencodeError> = decoder::from_str(&s);
+    let r: Result<Vec<i64>, BencodeError> = de::from_str(&s);
     match r {
         Ok(v) => assert_eq!(v, [666]),
         _ => panic!(),
@@ -180,11 +180,11 @@ fn stop_short() {
 
 #[test]
 fn multi_digit_string_length() {
-    assert_eq!(decoder::from_str::<String>(&String::from_str("1:o").unwrap()).unwrap(),
+    assert_eq!(de::from_str::<String>(&String::from_str("1:o").unwrap()).unwrap(),
                "o".to_owned());
-    assert_eq!(decoder::from_str::<String>(&String::from_str("10:oooooooooo").unwrap()).unwrap(),
+    assert_eq!(de::from_str::<String>(&String::from_str("10:oooooooooo").unwrap()).unwrap(),
                "oooooooooo".to_owned());
-    assert_eq!(decoder::from_str::<String>(&String::from_str("100:oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo").unwrap()).unwrap(), "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo".to_owned());
+    assert_eq!(de::from_str::<String>(&String::from_str("100:oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo").unwrap()).unwrap(), "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo".to_owned());
 }
 
 #[test]
@@ -213,7 +213,7 @@ fn deserialize_to_struct() {
         x: i64,
     };
     let r: Result<Fake, BencodeError>;
-    r = decoder::from_bytes(b);
+    r = de::from_bytes(b);
     match r {
         Ok(r) => {
             assert_eq!(r,
@@ -239,7 +239,7 @@ fn deserialize_to_struct_with_option() {
         a: Option<String>,
     };
     let r: Result<Fake, BencodeError>;
-    r = decoder::from_bytes(b);
+    r = de::from_bytes(b);
     match r {
         Ok(r) => {
             assert_eq!(r,
@@ -259,7 +259,7 @@ fn deserialize_to_bencode() {
     let b = "d1:xi1111e1:y3:doge".as_bytes();
     #[derive(Debug, Deserialize)]
     let r: Result<Bencode, BencodeError>;
-    r = decoder::from_bytes(b);
+    r = de::from_bytes(b);
     let mut d: BTreeMap<Bencode, Bencode> = BTreeMap::new();
     d.insert("x".into(), 1111.into());
     d.insert("y".into(), "dog".into());
@@ -280,7 +280,7 @@ fn deserialize_to_bencode_struct_mix() {
         q: Vec<i64>,
     };
     let r: Result<Fake, BencodeError>;
-    r = decoder::from_bytes(b);
+    r = de::from_bytes(b);
     match r {
         Ok(r) => {
             assert_eq!(r,

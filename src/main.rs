@@ -4,7 +4,7 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_bytes;
 
-use serde_bencode::decoder;
+use serde_bencode::de;
 use std::io::{self, Read};
 use serde_bytes::ByteBuf;
 
@@ -98,7 +98,7 @@ fn main() {
     let mut handle = stdin.lock();
     match handle.read_to_end(&mut buffer) {
         Ok(_) => {
-            match decoder::from_bytes::<Torrent>(&buffer) {
+            match de::from_bytes::<Torrent>(&buffer) {
                 Ok(t) => render_torrent(&t),
                 Err(e) => println!("ERROR: {:?}", e),
             }
