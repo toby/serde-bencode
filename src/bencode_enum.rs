@@ -1,6 +1,8 @@
 use serde_bytes::ByteBuf;
 use std::collections::BTreeMap;
 
+// TODO: implement a real Value type by not abusing the enum ser/de!
+
 #[derive(PartialOrd, Eq, Ord, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub enum Bencode {
     ByteString(ByteBuf),
