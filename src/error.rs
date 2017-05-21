@@ -17,7 +17,7 @@ pub enum BencodeError {
     MissingField(String),
     DuplicateField(String),
     Custom(String),
-    EndOfStream
+    EndOfStream,
 }
 
 impl SerError for BencodeError {
@@ -44,11 +44,15 @@ impl DeError for BencodeError {
     }
 
     fn unknown_variant(field: &str, expected: &'static [&'static str]) -> Self {
-        BencodeError::UnknownVariant(format!("Unknown Variant: `{}` (expected one of: {:?})", field, expected))
+        BencodeError::UnknownVariant(format!("Unknown Variant: `{}` (expected one of: {:?})",
+                                             field,
+                                             expected))
     }
 
     fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
-        BencodeError::UnknownField(format!("Unknown Field: `{}` (expected one of: {:?})", field, expected))
+        BencodeError::UnknownField(format!("Unknown Field: `{}` (expected one of: {:?})",
+                                           field,
+                                           expected))
     }
 
     fn missing_field(field: &'static str) -> Self {

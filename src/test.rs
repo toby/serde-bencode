@@ -28,7 +28,7 @@ fn decode_bytes<'de, T: Deserialize<'de> + Debug>(b: &'de [u8]) -> Option<T> {
 fn decode_enum(s: &String) -> Option<Bencode> {
     match decoder::from_str(&s.as_str()) {
         Ok(r) => Some(r),
-        _ => None
+        _ => None,
     }
 }
 
@@ -37,7 +37,7 @@ fn test_enum_enc_dec<T: Into<Bencode> + std::fmt::Debug>(x: T) {
     let s = encode(b);
     match decode_bytes::<Bencode>(&s) {
         Some(d) => assert_eq!(&d, b),
-        _ => panic!("encode and decode don't match")
+        _ => panic!("encode and decode don't match"),
     }
 }
 
@@ -64,9 +64,13 @@ fn enc_dec_enum_list_mixed() {
 
 #[test]
 fn enc_dec_enum_list_nested() {
-    let l_grandchild = Bencode::List(vec!("two".into()));
-    let l_child = Bencode::List(vec!("one".into(), l_grandchild));
-    test_enum_enc_dec(vec!["one".into(), "two".into(), "three".into(), 4i64.into(), l_child]);
+    let l_grandchild = Bencode::List(vec!["two".into()]);
+    let l_child = Bencode::List(vec!["one".into(), l_grandchild]);
+    test_enum_enc_dec(vec!["one".into(),
+                           "two".into(),
+                           "three".into(),
+                           4i64.into(),
+                           l_child]);
 }
 
 #[test]
@@ -127,7 +131,7 @@ fn deserialize_to_string() {
     let r: Result<String, BencodeError> = decoder::from_str(&s);
     match r {
         Ok(v) => assert_eq!(v, "yes"),
-        _ => panic!()
+        _ => panic!(),
     }
 }
 
@@ -137,7 +141,7 @@ fn deserialize_to_i64() {
     let r: Result<i64, BencodeError> = decoder::from_str(&s);
     match r {
         Ok(v) => assert_eq!(v, 666),
-        _ => panic!()
+        _ => panic!(),
     }
 }
 
@@ -147,7 +151,7 @@ fn deserialize_to_vec() {
     let r: Result<Vec<i64>, BencodeError> = decoder::from_str(&s);
     match r {
         Ok(v) => assert_eq!(v, [666]),
-        _ => panic!()
+        _ => panic!(),
     }
 }
 
@@ -176,8 +180,10 @@ fn stop_short() {
 
 #[test]
 fn multi_digit_string_length() {
-    assert_eq!(decoder::from_str::<String>(&String::from_str("1:o").unwrap()).unwrap(), "o".to_owned());
-    assert_eq!(decoder::from_str::<String>(&String::from_str("10:oooooooooo").unwrap()).unwrap(), "oooooooooo".to_owned());
+    assert_eq!(decoder::from_str::<String>(&String::from_str("1:o").unwrap()).unwrap(),
+               "o".to_owned());
+    assert_eq!(decoder::from_str::<String>(&String::from_str("10:oooooooooo").unwrap()).unwrap(),
+               "oooooooooo".to_owned());
     assert_eq!(decoder::from_str::<String>(&String::from_str("100:oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo").unwrap()).unwrap(), "oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo".to_owned());
 }
 
@@ -186,7 +192,7 @@ fn serialize_struct() {
     #[derive(Debug, Serialize)]
     struct Fake {
         x: i64,
-        y: String
+        y: String,
     };
     let f = Fake {
         x: 1111,
@@ -209,8 +215,14 @@ fn deserialize_to_struct() {
     let r: Result<Fake, BencodeError>;
     r = decoder::from_bytes(b);
     match r {
-        Ok(r) => assert_eq!(r, Fake { x: 1111, y: String::from_str("dog").unwrap() }),
-        Err(e) => panic!("Error: {:?}", e)
+        Ok(r) => {
+            assert_eq!(r,
+                       Fake {
+                           x: 1111,
+                           y: String::from_str("dog").unwrap(),
+                       })
+        }
+        Err(e) => panic!("Error: {:?}", e),
     }
 }
 
@@ -229,13 +241,16 @@ fn deserialize_to_struct_with_option() {
     let r: Result<Fake, BencodeError>;
     r = decoder::from_bytes(b);
     match r {
-        Ok(r) => assert_eq!(r, Fake {
-            x: 1111,
-            y: String::from_str("dog").unwrap(),
-            z: Some(String::from_str("yo").unwrap()),
-            a: None
-        }),
-        Err(e) => panic!("Error: {:?}", e)
+        Ok(r) => {
+            assert_eq!(r,
+                       Fake {
+                           x: 1111,
+                           y: String::from_str("dog").unwrap(),
+                           z: Some(String::from_str("yo").unwrap()),
+                           a: None,
+                       })
+        }
+        Err(e) => panic!("Error: {:?}", e),
     }
 }
 
@@ -250,7 +265,7 @@ fn deserialize_to_bencode() {
     d.insert("y".into(), "dog".into());
     match r {
         Ok(r) => assert_eq!(r, Bencode::Dict(d)),
-        Err(e) => panic!("Error: {:?}", e)
+        Err(e) => panic!("Error: {:?}", e),
     }
 }
 
@@ -262,13 +277,21 @@ fn deserialize_to_bencode_struct_mix() {
         y: String,
         x: i64,
         z: Bencode,
-        q: Vec<i64>
+        q: Vec<i64>,
     };
     let r: Result<Fake, BencodeError>;
     r = decoder::from_bytes(b);
     match r {
-        Ok(r) => assert_eq!(r, Fake { x: 1111, y: String::from_str("dog").unwrap(), z: Bencode::Integer(66), q: vec![666] }),
-        Err(e) => panic!("Error: {:?}", e)
+        Ok(r) => {
+            assert_eq!(r,
+                       Fake {
+                           x: 1111,
+                           y: String::from_str("dog").unwrap(),
+                           z: Bencode::Integer(66),
+                           q: vec![666],
+                       })
+        }
+        Err(e) => panic!("Error: {:?}", e),
     }
 }
 
@@ -281,11 +304,17 @@ fn serialize_lexical_sorted_keys() {
         z: i32,
         c: i32,
     };
-    let f = Fake {aaa: 1, bb: 2, z: 3, c: 4 };
+    let f = Fake {
+        aaa: 1,
+        bb: 2,
+        z: 3,
+        c: 4,
+    };
     let mut ser = Encoder::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
-    assert_eq!(String::from_utf8(r).unwrap(), "d1:ci4e1:zi3e2:bbi2e3:aaai1ee");
+    assert_eq!(String::from_utf8(r).unwrap(),
+               "d1:ci4e1:zi3e2:bbi2e3:aaai1ee");
 }
 
 #[test]
@@ -303,7 +332,7 @@ fn serialize_newtype_struct() {
 fn serialize_newtype_variant() {
     #[derive(Serialize)]
     enum Fake {
-        Test(i32)
+        Test(i32),
     };
     let f = Fake::Test(66);
     let mut ser = Encoder::new();
@@ -332,7 +361,7 @@ fn serialize_none() {
 
 #[test]
 fn serialize_tuple() {
-    let f = (1,2,3,"one");
+    let f = (1, 2, 3, "one");
     let mut ser = Encoder::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
@@ -356,7 +385,8 @@ fn readme_bencode_example() {
     let mut ser = Encoder::new();
     list.serialize(&mut ser).unwrap();
     let list_serialize: Vec<u8> = ser.into();
-    assert_eq!(String::from_utf8(list_serialize).unwrap(), "l3:one3:two5:threei4ee");
+    assert_eq!(String::from_utf8(list_serialize).unwrap(),
+               "l3:one3:two5:threei4ee");
 }
 
 #[test]
@@ -364,9 +394,12 @@ fn struct_none_vals() {
     #[derive(Serialize)]
     struct Fake {
         a: Option<i32>,
-        b: Option<i32>
+        b: Option<i32>,
     };
-    let f = Fake { a: None, b: Some(1) };
+    let f = Fake {
+        a: None,
+        b: Some(1),
+    };
     let mut ser = Encoder::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();

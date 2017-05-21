@@ -100,10 +100,10 @@ fn main() {
         Ok(_) => {
             match decoder::from_bytes::<Torrent>(&buffer) {
                 Ok(t) => render_torrent(&t),
-                Err(e) => println!("ERROR: {:?}", e)
+                Err(e) => println!("ERROR: {:?}", e),
             }
-        },
-        Err(e) => println!("ERROR: {:?}", e)
+        }
+        Err(e) => println!("ERROR: {:?}", e),
 
     }
 }

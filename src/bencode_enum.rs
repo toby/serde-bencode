@@ -6,7 +6,7 @@ pub enum Bencode {
     ByteString(ByteBuf),
     Integer(i64),
     List(Vec<Bencode>),
-    Dict(BTreeMap<Bencode, Bencode>)
+    Dict(BTreeMap<Bencode, Bencode>),
 }
 
 impl From<i64> for Bencode {

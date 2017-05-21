@@ -1,7 +1,8 @@
 use std::io::Read;
 use std::result;
 use std::str;
-use serde::de::{Deserializer, Deserialize, DeserializeSeed, Visitor, VariantAccess, SeqAccess, MapAccess, EnumAccess};
+use serde::de::{Deserializer, Deserialize, DeserializeSeed, Visitor, VariantAccess, SeqAccess,
+                MapAccess, EnumAccess};
 use error::BencodeError;
 
 pub type Result<T> = result::Result<T, BencodeError>;
@@ -10,7 +11,7 @@ pub struct BencodeVisitor<'a, R: 'a + Read> {
     de: &'a mut BencodeDecoder<R>,
 }
 
-impl <'a, R: 'a + Read> BencodeVisitor<'a, R> {
+impl<'a, R: 'a + Read> BencodeVisitor<'a, R> {
     fn new(de: &'a mut BencodeDecoder<R>) -> BencodeVisitor<'a, R> {
         BencodeVisitor { de: de }
     }
@@ -65,7 +66,7 @@ impl<'de, 'a, R: 'a + Read> MapAccess<'de> for BencodeVisitor<'a, R> {
             Err(_) => {
                 self.de.state.pop();
                 Ok(None)
-            },
+            }
         }
     }
 
@@ -100,7 +101,7 @@ pub struct BencodeDecoder<R: Read> {
     reader: R,
     state: Vec<State>,
     is_struct: bool,
-    is_option: bool
+    is_option: bool,
 }
 
 impl<'de, R: Read> BencodeDecoder<R> {
@@ -109,7 +110,7 @@ impl<'de, R: Read> BencodeDecoder<R> {
             reader: reader,
             state: vec![],
             is_struct: false,
-            is_option: false
+            is_option: false,
         }
     }
 
@@ -120,12 +121,17 @@ impl<'de, R: Read> BencodeDecoder<R> {
             match str::from_utf8(&buf) {
                 Ok("e") => {
                     return match result.parse::<i64>() {
-                        Ok(i) => Ok(State::I(i)),
-                        Err(_) => Err(BencodeError::InvalidValue(format!("Can't parse `{}` as i64", result))),
-                    }
+                               Ok(i) => Ok(State::I(i)),
+                               Err(_) => {
+                                   Err(BencodeError::InvalidValue(format!("Can't parse `{}` as i64",
+                                                                          result)))
+                               }
+                           }
                 }
                 Ok(c) => result.push_str(&c),
-                Err(_) => return Err(BencodeError::InvalidValue("Non UTF-8 integer encoding".to_string())),
+                Err(_) => {
+                    return Err(BencodeError::InvalidValue("Non UTF-8 integer encoding".to_string()))
+                }
             }
         }
         Err(BencodeError::EndOfStream)
@@ -154,13 +160,19 @@ impl<'de, R: Read> BencodeDecoder<R> {
                                 ":" => {
                                     match len.parse::<i64>() {
                                         Ok(len) => return Ok(len),
-                                        Err(_) => return Err(BencodeError::InvalidValue(format!("Can't parse `{}` as string length", len))),
+                                        Err(_) => {
+                                            return Err(BencodeError::InvalidValue(format!("Can't parse `{}` as string length",
+                                                                                          len)))
+                                        }
                                     }
                                 }
                                 n => len.push_str(n),
                             }
                         }
-                        Err(_) => return Err(BencodeError::InvalidValue("Non UTF-8 integer encoding".to_string())),
+                        Err(_) => {
+                            return Err(BencodeError::InvalidValue("Non UTF-8 integer encoding"
+                                                                      .to_string()))
+                        }
                     }
                 }
                 _ => return Err(BencodeError::EndOfStream),
@@ -170,11 +182,13 @@ impl<'de, R: Read> BencodeDecoder<R> {
 
     fn parse_byte_string(&mut self, len_char: char) -> Result<State> {
         match self.parse_byte_string_len(len_char) {
-            Ok(len) => match self.parse_byte_string_body(len) {
-                Ok(b) => Ok(State::S(b)),
-                Err(e) => Err(e)
-            },
-            Err(e) => Err(e)
+            Ok(len) => {
+                match self.parse_byte_string_body(len) {
+                    Ok(b) => Ok(State::S(b)),
+                    Err(e) => Err(e),
+                }
+            }
+            Err(e) => Err(e),
         }
     }
 
@@ -186,7 +200,7 @@ impl<'de, R: Read> BencodeDecoder<R> {
                 'd' => Ok(State::D),
                 'e' => Ok(State::E),
                 'i' => self.parse_int(),
-                n @ '0' ... '9' => self.parse_byte_string(n),
+                n @ '0'...'9' => self.parse_byte_string(n),
                 _ => Err(BencodeError::EndOfStream),
             }
         } else {
@@ -231,7 +245,7 @@ impl<'de, 'a, R: Read> Deserializer<'de> for &'a mut BencodeDecoder<R> {
     }
 
     #[inline]
-    fn deserialize_option<V:Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
+    fn deserialize_option<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         self.is_option = true;
         if self.state.last() == None {
             self.update_state();
@@ -240,7 +254,11 @@ impl<'de, 'a, R: Read> Deserializer<'de> for &'a mut BencodeDecoder<R> {
     }
 
     #[inline]
-    fn deserialize_struct<V: Visitor<'de>>(self, _name: &'static str, _fields: &'static [&'static str], visitor: V) -> Result<V::Value> {
+    fn deserialize_struct<V: Visitor<'de>>(self,
+                                           _name: &'static str,
+                                           _fields: &'static [&'static str],
+                                           visitor: V)
+                                           -> Result<V::Value> {
         self.is_struct = true;
         if self.state.last() == None {
             self.update_state();
@@ -269,10 +287,10 @@ impl<'de, 'a, R: Read> Deserializer<'de> for &'a mut BencodeDecoder<R> {
 
     #[inline]
     fn deserialize_enum<V: Visitor<'de>>(self,
-                                        _enum: &'static str,
-                                        _variants: &'static [&'static str],
-                                        visitor: V)
-                                        -> Result<V::Value> {
+                                         _enum: &'static str,
+                                         _variants: &'static [&'static str],
+                                         visitor: V)
+                                         -> Result<V::Value> {
         self.is_struct = false;
         if self.state.last() == None {
             self.update_state();
