@@ -1,6 +1,6 @@
 use bencode_enum::Bencode;
 use de;
-use encoder::Encoder;
+use ser::Serializer;
 use error::BencodeError;
 use serde::ser::Serialize;
 use serde::de::Deserialize;
@@ -10,7 +10,7 @@ use std::fmt::Debug;
 use std;
 
 fn encode<T: Serialize>(b: &T) -> Vec<u8> {
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     b.serialize(&mut ser).unwrap();
     ser.into()
 }
@@ -95,7 +95,7 @@ fn enc_dec_map_enum_mixed() {
 #[test]
 fn serialize_i64() {
     let x: i64 = 666;
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     x.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(r, b"i666e");
@@ -104,7 +104,7 @@ fn serialize_i64() {
 #[test]
 fn serialize_str() {
     let x = "xxx";
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     x.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(r, b"3:xxx");
@@ -113,13 +113,13 @@ fn serialize_str() {
 #[test]
 fn serialize_bool() {
     let x = false;
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     x.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(r, b"i0e");
 
     let x = true;
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     x.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(r, b"i1e");
@@ -198,7 +198,7 @@ fn serialize_struct() {
         x: 1111,
         y: String::from("dog"),
     };
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(r).unwrap(), "d1:xi1111e1:y3:doge");
@@ -310,7 +310,7 @@ fn serialize_lexical_sorted_keys() {
         z: 3,
         c: 4,
     };
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(r).unwrap(),
@@ -322,7 +322,7 @@ fn serialize_newtype_struct() {
     #[derive(Serialize)]
     struct Fake(i32);
     let f = Fake(66);
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(r).unwrap(), "i66e");
@@ -335,7 +335,7 @@ fn serialize_newtype_variant() {
         Test(i32),
     };
     let f = Fake::Test(66);
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(r).unwrap(), "i66e");
@@ -344,7 +344,7 @@ fn serialize_newtype_variant() {
 #[test]
 fn serialize_some() {
     let f = Some(1);
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(r).unwrap(), "i1e");
@@ -353,7 +353,7 @@ fn serialize_some() {
 #[test]
 fn serialize_none() {
     let f: Option<Bencode> = None;
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(r).unwrap(), "");
@@ -362,7 +362,7 @@ fn serialize_none() {
 #[test]
 fn serialize_tuple() {
     let f = (1, 2, 3, "one");
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(r).unwrap(), "li1ei2ei3e3:onee");
@@ -373,7 +373,7 @@ fn serialize_tuple_struct() {
     #[derive(Serialize)]
     struct Fake(i32, i32);
     let f = Fake(66, 66);
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(r).unwrap(), "li66ei66ee");
@@ -382,7 +382,7 @@ fn serialize_tuple_struct() {
 #[test]
 fn readme_bencode_example() {
     let list: Vec<Bencode> = vec!["one".into(), "two".into(), "three".into(), 4i64.into()];
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     list.serialize(&mut ser).unwrap();
     let list_serialize: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(list_serialize).unwrap(),
@@ -400,7 +400,7 @@ fn struct_none_vals() {
         a: None,
         b: Some(1),
     };
-    let mut ser = Encoder::new();
+    let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into();
     assert_eq!(String::from_utf8(r).unwrap(), "d1:bi1ee");

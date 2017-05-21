@@ -1,19 +1,18 @@
 use std::str;
-use serde::ser::{Serializer, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
-                 SerializeTupleVariant, SerializeMap, SerializeStruct, SerializeStructVariant};
+use serde::ser::{self, Serialize};
 use error::{BencodeError, Result};
 
 type Token = Vec<u8>;
 type Context = Vec<Token>;
 
 #[derive(Debug)]
-pub struct Encoder {
+pub struct Serializer {
     stack: Vec<Context>,
 }
 
-impl Encoder {
-    pub fn new() -> Encoder {
-        Encoder { stack: vec![Context::new()] }
+impl Serializer {
+    pub fn new() -> Serializer {
+        Serializer { stack: vec![Context::new()] }
     }
 
     pub fn encoded(&self) -> Vec<u8> {
@@ -79,22 +78,22 @@ impl Encoder {
     }
 }
 
-impl<'a> From<&'a Encoder> for Vec<u8> {
-    fn from(encoder: &Encoder) -> Vec<u8> {
+impl<'a> From<&'a Serializer> for Vec<u8> {
+    fn from(encoder: &Serializer) -> Vec<u8> {
         encoder.encoded()
     }
 }
 
-impl From<Encoder> for Vec<u8> {
-    fn from(encoder: Encoder) -> Vec<u8> {
+impl From<Serializer> for Vec<u8> {
+    fn from(encoder: Serializer) -> Vec<u8> {
         encoder.encoded()
     }
 }
 
-impl<'a> SerializeSeq for &'a mut Encoder {
+impl<'a> ser::SerializeSeq for &'a mut Serializer {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
+    fn serialize_element<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
     fn end(self) -> Result<()> {
@@ -104,46 +103,46 @@ impl<'a> SerializeSeq for &'a mut Encoder {
     }
 }
 
-impl<'a> SerializeTuple for &'a mut Encoder {
+impl<'a> ser::SerializeTuple for &'a mut Serializer {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
+    fn serialize_element<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
     fn end(self) -> Result<()> {
-        SerializeSeq::end(self)
+        ser::SerializeSeq::end(self)
     }
 }
 
-impl<'a> SerializeTupleStruct for &'a mut Encoder {
+impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
+    fn serialize_field<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
     fn end(self) -> Result<()> {
-        SerializeSeq::end(self)
+        ser::SerializeSeq::end(self)
     }
 }
 
-impl<'a> SerializeTupleVariant for &'a mut Encoder {
+impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
+    fn serialize_field<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
     fn end(self) -> Result<()> {
-        SerializeSeq::end(self)
+        ser::SerializeSeq::end(self)
     }
 }
 
-impl<'a> SerializeMap for &'a mut Encoder {
+impl<'a> ser::SerializeMap for &'a mut Serializer {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<()> {
+    fn serialize_key<T: ?Sized + ser::Serialize>(&mut self, key: &T) -> Result<()> {
         key.serialize(&mut **self)
     }
-    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
+    fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
     fn end(self) -> Result<()> {
@@ -152,13 +151,13 @@ impl<'a> SerializeMap for &'a mut Encoder {
     }
 }
 
-impl<'a> SerializeStruct for &'a mut Encoder {
+impl<'a> ser::SerializeStruct for &'a mut Serializer {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_field<T: ?Sized + Serialize>(&mut self,
-                                              key: &'static str,
-                                              value: &T)
-                                              -> Result<()> {
+    fn serialize_field<T: ?Sized + ser::Serialize>(&mut self,
+                                                   key: &'static str,
+                                                   value: &T)
+                                                   -> Result<()> {
         key.serialize(&mut **self)?;
         value.serialize(&mut **self)
     }
@@ -168,21 +167,21 @@ impl<'a> SerializeStruct for &'a mut Encoder {
     }
 }
 
-impl<'a> SerializeStructVariant for &'a mut Encoder {
+impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_field<T: ?Sized + Serialize>(&mut self,
-                                              key: &'static str,
-                                              value: &T)
-                                              -> Result<()> {
-        SerializeStruct::serialize_field(self, key, value)
+    fn serialize_field<T: ?Sized + ser::Serialize>(&mut self,
+                                                   key: &'static str,
+                                                   value: &T)
+                                                   -> Result<()> {
+        ser::SerializeStruct::serialize_field(self, key, value)
     }
     fn end(self) -> Result<()> {
-        SerializeStruct::end(self)
+        ser::SerializeStruct::end(self)
     }
 }
 
-impl<'a> Serializer for &'a mut Encoder {
+impl<'a> ser::Serializer for &'a mut Serializer {
     type Ok = ();
     type Error = BencodeError;
     type SerializeSeq = Self;
@@ -258,25 +257,25 @@ impl<'a> Serializer for &'a mut Encoder {
                               -> Result<()> {
         Err(BencodeError::UnknownVariant("Unit variant not supported.".to_string()))
     }
-    fn serialize_newtype_struct<T: ?Sized + Serialize>(self,
-                                                       _name: &'static str,
-                                                       value: &T)
-                                                       -> Result<()> {
+    fn serialize_newtype_struct<T: ?Sized + ser::Serialize>(self,
+                                                            _name: &'static str,
+                                                            value: &T)
+                                                            -> Result<()> {
         value.serialize(self)
     }
-    fn serialize_newtype_variant<T: ?Sized + Serialize>(self,
-                                                        _name: &'static str,
-                                                        _variant_index: u32,
-                                                        _variant: &'static str,
-                                                        value: &T)
-                                                        -> Result<()> {
+    fn serialize_newtype_variant<T: ?Sized + ser::Serialize>(self,
+                                                             _name: &'static str,
+                                                             _variant_index: u32,
+                                                             _variant: &'static str,
+                                                             value: &T)
+                                                             -> Result<()> {
         value.serialize(self)
     }
     fn serialize_none(self) -> Result<()> {
         self.push("".as_bytes());
         Ok(())
     }
-    fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<()> {
+    fn serialize_some<T: ?Sized + ser::Serialize>(self, value: &T) -> Result<()> {
         value.serialize(self)
     }
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self> {

@@ -28,7 +28,10 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
         Err(BencodeError::UnknownVariant("Tuple variant not supported.".into()))
     }
 
-    fn struct_variant<V: de::Visitor<'de>>(self, _: &'static [&'static str], _: V) -> Result<V::Value> {
+    fn struct_variant<V: de::Visitor<'de>>(self,
+                                           _: &'static [&'static str],
+                                           _: V)
+                                           -> Result<V::Value> {
         Err(BencodeError::UnknownVariant("Struct variant not supported.".into()))
     }
 }
@@ -36,7 +39,9 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
 impl<'de, 'a, R: 'a + Read> de::SeqAccess<'de> for BencodeAccess<'a, R> {
     type Error = BencodeError;
 
-    fn next_element_seed<T: de::DeserializeSeed<'de>>(&mut self, seed: T) -> Result<Option<T::Value>> {
+    fn next_element_seed<T: de::DeserializeSeed<'de>>(&mut self,
+                                                      seed: T)
+                                                      -> Result<Option<T::Value>> {
         self.de.update_state();
         match seed.deserialize(&mut *self.de) {
             Ok(v) => Ok(Some(v)),
@@ -251,10 +256,10 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
 
     #[inline]
     fn deserialize_struct<V: de::Visitor<'de>>(self,
-                                           _name: &'static str,
-                                           _fields: &'static [&'static str],
-                                           visitor: V)
-                                           -> Result<V::Value> {
+                                               _name: &'static str,
+                                               _fields: &'static [&'static str],
+                                               visitor: V)
+                                               -> Result<V::Value> {
         self.is_struct = true;
         if self.state.last() == None {
             self.update_state();
@@ -283,10 +288,10 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
 
     #[inline]
     fn deserialize_enum<V: de::Visitor<'de>>(self,
-                                         _enum: &'static str,
-                                         _variants: &'static [&'static str],
-                                         visitor: V)
-                                         -> Result<V::Value> {
+                                             _enum: &'static str,
+                                             _variants: &'static [&'static str],
+                                             visitor: V)
+                                             -> Result<V::Value> {
         self.is_struct = false;
         if self.state.last() == None {
             self.update_state();
