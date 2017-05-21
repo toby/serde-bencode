@@ -1,13 +1,17 @@
-use bencode_enum::Bencode;
-use de;
-use ser::Serializer;
-use error::BencodeError;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_bencode;
+
+use serde_bencode::bencode_enum::Bencode;
+use serde_bencode::de;
+use serde_bencode::ser::Serializer;
+use serde_bencode::error::BencodeError;
 use serde::ser::Serialize;
 use serde::de::Deserialize;
 use std::str::FromStr;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
-use std;
 
 fn encode<T: Serialize>(b: &T) -> Vec<u8> {
     let mut ser = Serializer::new();

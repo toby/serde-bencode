@@ -8,6 +8,3 @@ pub mod error;
 pub mod ser;
 pub mod de;
 pub mod bencode_enum;
-
-#[cfg(test)]
-mod test;
