@@ -1,92 +1,31 @@
-use std::str;
-use serde::ser::{self, Serialize};
-use error::{BencodeError, Result};
+mod string;
 
-type Token = Vec<u8>;
-type Context = Vec<Token>;
+use std::str;
+use serde::ser;
+use error::{BencodeError, Result};
 
 #[derive(Debug)]
 pub struct Serializer {
-    stack: Vec<Context>,
+    buf: Vec<u8>,
 }
 
 impl Serializer {
     pub fn new() -> Serializer {
-        Serializer { stack: vec![Context::new()] }
+        Serializer { buf: Vec::new() }
     }
 
-    pub fn encoded(&self) -> Vec<u8> {
-        let mut result: Vec<u8> = Vec::new();
-        for c in self.stack.iter() {
-            for t in c.iter() {
-                result.extend_from_slice(&t)
-            }
-        }
-        result
+    pub fn into_vec(self) -> Vec<u8> {
+        self.buf
     }
 
-    fn push(&mut self, token: &[u8]) {
-        if let Some(last) = self.stack.last_mut() {
-            (*last).push(token.into());
-        }
-    }
-
-    fn new_context(&mut self) {
-        self.stack.push(Context::new());
-    }
-
-    fn merge_context(&mut self) {
-        if let Some(current) = self.stack.pop() {
-            if let Some(last) = self.stack.last_mut() {
-                (*last).extend(current);
-            }
-        }
-    }
-
-    fn tokenify_context(&mut self) {
-        if let Some(c) = self.stack.pop() {
-            let token: Token = c.into_iter().flat_map(|t| t).collect();
-            self.push(&token);
-        }
-    }
-
-    fn sort_current_context(&mut self) {
-        if let Some(last) = self.stack.pop() {
-            let mut m: Vec<_> = last.chunks(2).collect();
-            m.sort();
-            self.new_context();
-            for c in m.iter() {
-                if c[1].len() > 2 {
-                    self.push(&c[0]);
-                    self.push(&c[1]);
-                }
-            }
-        }
-    }
-
-    fn start_dict(&mut self) {
-        self.new_context();
-        self.push(&"d".as_bytes());
-        self.new_context();
-    }
-
-    fn end_dict(&mut self) {
-        self.sort_current_context();
-        self.merge_context();
-        self.push("e".as_bytes());
-        self.tokenify_context();
+    fn push<T: AsRef<[u8]>>(&mut self, token: T) {
+        self.buf.extend_from_slice(token.as_ref());
     }
 }
 
-impl<'a> From<&'a Serializer> for Vec<u8> {
-    fn from(encoder: &Serializer) -> Vec<u8> {
-        encoder.encoded()
-    }
-}
-
-impl From<Serializer> for Vec<u8> {
-    fn from(encoder: Serializer) -> Vec<u8> {
-        encoder.encoded()
+impl AsRef<[u8]> for Serializer {
+    fn as_ref(&self) -> &[u8] {
+        self.buf.as_ref()
     }
 }
 
@@ -98,7 +37,6 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
     }
     fn end(self) -> Result<()> {
         self.push("e".as_bytes());
-        self.tokenify_context();
         Ok(())
     }
 }
@@ -136,38 +74,75 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeMap for &'a mut Serializer {
+pub struct SerializeMap<'a> {
+    ser: &'a mut Serializer,
+    entries: Vec<(Vec<u8>, Vec<u8>)>,
+    cur_key: Option<Vec<u8>>,
+}
+
+impl<'a> SerializeMap<'a> {
+    pub fn new(ser: &'a mut Serializer) -> SerializeMap {
+        SerializeMap {
+            ser: ser,
+            entries: Vec::new(),
+            cur_key: None,
+        }
+    }
+}
+
+impl<'a> ser::SerializeMap for SerializeMap<'a> {
     type Ok = ();
     type Error = BencodeError;
     fn serialize_key<T: ?Sized + ser::Serialize>(&mut self, key: &T) -> Result<()> {
-        key.serialize(&mut **self)
+        if self.cur_key.is_some() {
+            return Err(BencodeError::InvalidValue("`serialize_key` called multiple times without calling  `serialize_value`".to_string()));
+        }
+        self.cur_key = Some(key.serialize(&mut string::StringSerializer)?);
+        Ok(())
     }
     fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
-        value.serialize(&mut **self)
+        let key = self.cur_key.take().ok_or(BencodeError::InvalidValue("`serialize_value` called without calling `serialize_key`".to_string()))?;
+        let mut ser = Serializer::new();
+        value.serialize(&mut ser)?;
+        self.entries.push((key, ser.into_vec()));
+        Ok(())
     }
     fn end(self) -> Result<()> {
-        self.end_dict();
+        if self.cur_key.is_some() {
+            return Err(BencodeError::InvalidValue("`serialize_key` called without calling  `serialize_value`".to_string()));
+        }
+        let SerializeMap {
+            mut ser,
+            mut entries,
+            ..
+        } = self;
+        entries.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
+        ser.push("d");
+        for (k, v) in entries {
+            ser::Serializer::serialize_bytes(&mut *ser, k.as_ref())?;
+            ser.push(v);
+        }
+        ser.push("e");
         Ok(())
     }
 }
 
-impl<'a> ser::SerializeStruct for &'a mut Serializer {
+impl<'a> ser::SerializeStruct for SerializeMap<'a> {
     type Ok = ();
     type Error = BencodeError;
     fn serialize_field<T: ?Sized + ser::Serialize>(&mut self,
                                                    key: &'static str,
                                                    value: &T)
                                                    -> Result<()> {
-        key.serialize(&mut **self)?;
-        value.serialize(&mut **self)
+        ser::SerializeMap::serialize_key(self, key)?;
+        ser::SerializeMap::serialize_value(self, value)
     }
     fn end(self) -> Result<()> {
-        self.end_dict();
-        Ok(())
+        ser::SerializeMap::end(self)
     }
 }
 
-impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
+impl<'a> ser::SerializeStructVariant for SerializeMap<'a> {
     type Ok = ();
     type Error = BencodeError;
     fn serialize_field<T: ?Sized + ser::Serialize>(&mut self,
@@ -188,9 +163,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     type SerializeTuple = Self;
     type SerializeTupleStruct = Self;
     type SerializeTupleVariant = Self;
-    type SerializeMap = Self;
-    type SerializeStruct = Self;
-    type SerializeStructVariant = Self;
+    type SerializeMap = SerializeMap<'a>;
+    type SerializeStruct = SerializeMap<'a>;
+    type SerializeStructVariant = SerializeMap<'a>;
 
     fn serialize_bool(self, value: bool) -> Result<()> {
         self.serialize_i64(value as i64)
@@ -279,7 +254,6 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         value.serialize(self)
     }
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self> {
-        self.new_context();
         self.push("l".as_bytes());
         Ok(self)
     }
@@ -300,11 +274,10 @@ impl<'a> ser::Serializer for &'a mut Serializer {
                                -> Result<Self> {
         Err(BencodeError::UnknownVariant("Tuple variant not supported.".to_string()))
     }
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self> {
-        self.start_dict();
-        Ok(self)
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
+        Ok(SerializeMap::new(self))
     }
-    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self> {
+    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
         self.serialize_map(Some(len))
     }
     fn serialize_struct_variant(self,
@@ -312,7 +285,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
                                 _variant_index: u32,
                                 _variant: &'static str,
                                 _len: usize)
-                                -> Result<Self> {
+                                -> Result<Self::SerializeStructVariant> {
         Err(BencodeError::UnknownVariant("Struct variant not supported.".to_string()))
     }
 }

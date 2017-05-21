@@ -24,8 +24,7 @@ fn ser_de_simple(b: &mut Bencher) {
         let a = Fake {a: 2, b: 7};
         let mut ser = Serializer::new();
         a.serialize(&mut ser).unwrap();
-        let a_bytes: Vec<u8> = ser.into();
-        let b: Fake = from_bytes(a_bytes.as_ref()).unwrap();
+        let b: Fake = from_bytes(ser.as_ref()).unwrap();
         b
     });
 }
@@ -48,8 +47,7 @@ fn ser_de_nested(b: &mut Bencher) {
         let a = FakeB {a: 2, b: FakeA {a: 7, b: 9}};
         let mut ser = Serializer::new();
         a.serialize(&mut ser).unwrap();
-        let a_bytes: Vec<u8> = ser.into();
-        let b: FakeB = from_bytes(a_bytes.as_ref()).unwrap();
+        let b: FakeB = from_bytes(ser.as_ref()).unwrap();
         b
     });
 }
