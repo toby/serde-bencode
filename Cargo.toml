@@ -4,6 +4,7 @@ description = "A Serde backed Bencode encoding/decoding library for Rust."
 version = "0.1.3"
 authors = ["Toby Padilla <tobypadilla@gmail.com>"]
 repository = "https://github.com/toby/serde-bencode"
+documentation = "https://docs.rs/serde_bencode/"
 license = "MIT"
 keywords = ["bencode", "serialize", "deserialize", "serde"]
 
