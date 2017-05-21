@@ -1,7 +1,7 @@
 use std::str;
 use serde::ser::{Serializer, Serialize, SerializeSeq, SerializeTuple, SerializeTupleStruct,
                  SerializeTupleVariant, SerializeMap, SerializeStruct, SerializeStructVariant};
-use error::BencodeError;
+use error::{BencodeError, Result};
 
 type Token = Vec<u8>;
 type Context = Vec<Token>;
@@ -94,10 +94,10 @@ impl From<Encoder> for Vec<u8> {
 impl<'a> SerializeSeq for &'a mut Encoder {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
-    fn end(self) -> Result<Self::Ok, Self::Error> {
+    fn end(self) -> Result<()> {
         self.push("e".as_bytes());
         self.tokenify_context();
         Ok(())
@@ -107,10 +107,10 @@ impl<'a> SerializeSeq for &'a mut Encoder {
 impl<'a> SerializeTuple for &'a mut Encoder {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
-    fn end(self) -> Result<Self::Ok, Self::Error> {
+    fn end(self) -> Result<()> {
         SerializeSeq::end(self)
     }
 }
@@ -118,10 +118,10 @@ impl<'a> SerializeTuple for &'a mut Encoder {
 impl<'a> SerializeTupleStruct for &'a mut Encoder {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
-    fn end(self) -> Result<Self::Ok, Self::Error> {
+    fn end(self) -> Result<()> {
         SerializeSeq::end(self)
     }
 }
@@ -129,10 +129,10 @@ impl<'a> SerializeTupleStruct for &'a mut Encoder {
 impl<'a> SerializeTupleVariant for &'a mut Encoder {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
-    fn end(self) -> Result<Self::Ok, Self::Error> {
+    fn end(self) -> Result<()> {
         SerializeSeq::end(self)
     }
 }
@@ -140,13 +140,13 @@ impl<'a> SerializeTupleVariant for &'a mut Encoder {
 impl<'a> SerializeMap for &'a mut Encoder {
     type Ok = ();
     type Error = BencodeError;
-    fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), Self::Error> {
+    fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<()> {
         key.serialize(&mut **self)
     }
-    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
+    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
-    fn end(self) -> Result<Self::Ok, Self::Error> {
+    fn end(self) -> Result<()> {
         self.end_dict();
         Ok(())
     }
@@ -158,11 +158,11 @@ impl<'a> SerializeStruct for &'a mut Encoder {
     fn serialize_field<T: ?Sized + Serialize>(&mut self,
                                               key: &'static str,
                                               value: &T)
-                                              -> Result<(), Self::Error> {
+                                              -> Result<()> {
         key.serialize(&mut **self)?;
         value.serialize(&mut **self)
     }
-    fn end(self) -> Result<Self::Ok, Self::Error> {
+    fn end(self) -> Result<()> {
         self.end_dict();
         Ok(())
     }
@@ -174,10 +174,10 @@ impl<'a> SerializeStructVariant for &'a mut Encoder {
     fn serialize_field<T: ?Sized + Serialize>(&mut self,
                                               key: &'static str,
                                               value: &T)
-                                              -> Result<(), Self::Error> {
+                                              -> Result<()> {
         SerializeStruct::serialize_field(self, key, value)
     }
-    fn end(self) -> Result<Self::Ok, Self::Error> {
+    fn end(self) -> Result<()> {
         SerializeStruct::end(self)
     }
 }
@@ -193,19 +193,19 @@ impl<'a> Serializer for &'a mut Encoder {
     type SerializeStruct = Self;
     type SerializeStructVariant = Self;
 
-    fn serialize_bool(self, value: bool) -> Result<(), Self::Error> {
+    fn serialize_bool(self, value: bool) -> Result<()> {
         self.serialize_i64(value as i64)
     }
-    fn serialize_i8(self, value: i8) -> Result<(), Self::Error> {
+    fn serialize_i8(self, value: i8) -> Result<()> {
         self.serialize_i64(value as i64)
     }
-    fn serialize_i16(self, value: i16) -> Result<(), Self::Error> {
+    fn serialize_i16(self, value: i16) -> Result<()> {
         self.serialize_i64(value as i64)
     }
-    fn serialize_i32(self, value: i32) -> Result<(), Self::Error> {
+    fn serialize_i32(self, value: i32) -> Result<()> {
         self.serialize_i64(value as i64)
     }
-    fn serialize_i64(self, value: i64) -> Result<(), Self::Error> {
+    fn serialize_i64(self, value: i64) -> Result<()> {
         let mut token = Vec::new();
         token.extend_from_slice(&"i".as_bytes());
         token.extend_from_slice(&value.to_string().as_bytes());
@@ -213,31 +213,31 @@ impl<'a> Serializer for &'a mut Encoder {
         self.push(&token);
         Ok(())
     }
-    fn serialize_u8(self, value: u8) -> Result<(), Self::Error> {
+    fn serialize_u8(self, value: u8) -> Result<()> {
         self.serialize_i64(value as i64)
     }
-    fn serialize_u16(self, value: u16) -> Result<(), Self::Error> {
+    fn serialize_u16(self, value: u16) -> Result<()> {
         self.serialize_i64(value as i64)
     }
-    fn serialize_u32(self, value: u32) -> Result<(), Self::Error> {
+    fn serialize_u32(self, value: u32) -> Result<()> {
         self.serialize_i64(value as i64)
     }
-    fn serialize_u64(self, value: u64) -> Result<(), Self::Error> {
+    fn serialize_u64(self, value: u64) -> Result<()> {
         self.serialize_i64(value as i64)
     }
-    fn serialize_f32(self, _value: f32) -> Result<(), Self::Error> {
+    fn serialize_f32(self, _value: f32) -> Result<()> {
         Err(BencodeError::InvalidValue("Cannot serialize f32".to_string()))
     }
-    fn serialize_f64(self, _value: f64) -> Result<(), Self::Error> {
+    fn serialize_f64(self, _value: f64) -> Result<()> {
         Err(BencodeError::InvalidValue("Cannot serialize f64".to_string()))
     }
-    fn serialize_char(self, value: char) -> Result<(), Self::Error> {
+    fn serialize_char(self, value: char) -> Result<()> {
         self.serialize_bytes(&[value as u8])
     }
-    fn serialize_str(self, value: &str) -> Result<(), Self::Error> {
+    fn serialize_str(self, value: &str) -> Result<()> {
         self.serialize_bytes(value.as_bytes())
     }
-    fn serialize_bytes(self, value: &[u8]) -> Result<(), Self::Error> {
+    fn serialize_bytes(self, value: &[u8]) -> Result<()> {
         let mut token = Vec::new();
         token.extend_from_slice(&value.len().to_string().as_bytes());
         token.extend_from_slice(&":".as_bytes());
@@ -245,23 +245,23 @@ impl<'a> Serializer for &'a mut Encoder {
         self.push(&token);
         Ok(())
     }
-    fn serialize_unit(self) -> Result<(), Self::Error> {
+    fn serialize_unit(self) -> Result<()> {
         Ok(())
     }
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<(), Self::Error> {
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
         self.serialize_unit()
     }
     fn serialize_unit_variant(self,
                               _name: &'static str,
                               _variant_index: u32,
                               _variant: &'static str)
-                              -> Result<(), Self::Error> {
+                              -> Result<()> {
         Err(BencodeError::UnknownVariant("Unit variant not supported.".to_string()))
     }
     fn serialize_newtype_struct<T: ?Sized + Serialize>(self,
                                                        _name: &'static str,
                                                        value: &T)
-                                                       -> Result<(), Self::Error> {
+                                                       -> Result<()> {
         value.serialize(self)
     }
     fn serialize_newtype_variant<T: ?Sized + Serialize>(self,
@@ -269,28 +269,28 @@ impl<'a> Serializer for &'a mut Encoder {
                                                         _variant_index: u32,
                                                         _variant: &'static str,
                                                         value: &T)
-                                                        -> Result<(), Self::Error> {
+                                                        -> Result<()> {
         value.serialize(self)
     }
-    fn serialize_none(self) -> Result<(), Self::Error> {
+    fn serialize_none(self) -> Result<()> {
         self.push("".as_bytes());
         Ok(())
     }
-    fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<(), Self::Error> {
+    fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<()> {
         value.serialize(self)
     }
-    fn serialize_seq(self, _len: Option<usize>) -> Result<Self, Self::Error> {
+    fn serialize_seq(self, _len: Option<usize>) -> Result<Self> {
         self.new_context();
         self.push("l".as_bytes());
         Ok(self)
     }
-    // fn serialize_seq_fixed_size(self, size: usize) -> Result<Self, Self::Error> {
+    // fn serialize_seq_fixed_size(self, size: usize) -> Result<Self> {
     //     self.serialize_seq(Some(size))
     // }
-    fn serialize_tuple(self, size: usize) -> Result<Self, Self::Error> {
+    fn serialize_tuple(self, size: usize) -> Result<Self> {
         self.serialize_seq(Some(size))
     }
-    fn serialize_tuple_struct(self, _name: &'static str, len: usize) -> Result<Self, Self::Error> {
+    fn serialize_tuple_struct(self, _name: &'static str, len: usize) -> Result<Self> {
         self.serialize_seq(Some(len))
     }
     fn serialize_tuple_variant(self,
@@ -298,14 +298,14 @@ impl<'a> Serializer for &'a mut Encoder {
                                _variant_index: u32,
                                _variant: &'static str,
                                _len: usize)
-                               -> Result<Self, Self::Error> {
+                               -> Result<Self> {
         Err(BencodeError::UnknownVariant("Tuple variant not supported.".to_string()))
     }
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self, Self::Error> {
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self> {
         self.start_dict();
         Ok(self)
     }
-    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self, Self::Error> {
+    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self> {
         self.serialize_map(Some(len))
     }
     fn serialize_struct_variant(self,
@@ -313,7 +313,7 @@ impl<'a> Serializer for &'a mut Encoder {
                                 _variant_index: u32,
                                 _variant: &'static str,
                                 _len: usize)
-                                -> Result<Self, Self::Error> {
+                                -> Result<Self> {
         Err(BencodeError::UnknownVariant("Struct variant not supported.".to_string()))
     }
 }

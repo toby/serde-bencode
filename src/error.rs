@@ -2,9 +2,12 @@ use std::fmt;
 use std::fmt::Display;
 use std::error::Error as StdError;
 use std::io::Error as IoError;
+use std::result::Result as StdResult;
 use serde::ser::Error as SerError;
 use serde::de::Error as DeError;
 use serde::de::{Unexpected, Expected};
+
+pub type Result<T> = StdResult<T, BencodeError>;
 
 #[derive(Debug)]
 pub enum BencodeError {

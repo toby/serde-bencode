@@ -1,11 +1,8 @@
 use std::io::Read;
-use std::result;
 use std::str;
 use serde::de::{Deserializer, Deserialize, DeserializeSeed, Visitor, VariantAccess, SeqAccess,
                 MapAccess, EnumAccess};
-use error::BencodeError;
-
-pub type Result<T> = result::Result<T, BencodeError>;
+use error::{BencodeError, Result};
 
 pub struct BencodeVisitor<'a, R: 'a + Read> {
     de: &'a mut BencodeDecoder<R>,
