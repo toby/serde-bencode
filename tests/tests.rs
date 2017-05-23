@@ -3,15 +3,13 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_bencode;
 
-use serde_bencode::bencode_enum::Bencode;
-use serde_bencode::de;
+use serde_bencode::value::Value;
+use serde_bencode::de::{self, from_bytes};
 use serde_bencode::ser::Serializer;
-use serde_bencode::error::BencodeError;
+use serde_bencode::error::Result;
 use serde::ser::Serialize;
-use serde::de::Deserialize;
 use std::str::FromStr;
-use std::collections::BTreeMap;
-use std::fmt::Debug;
+use std::collections::HashMap;
 
 fn encode<T: Serialize>(b: &T) -> Vec<u8> {
     let mut ser = Serializer::new();
@@ -19,30 +17,18 @@ fn encode<T: Serialize>(b: &T) -> Vec<u8> {
     ser.into_vec()
 }
 
-fn decode_bytes<'de, T: Deserialize<'de> + Debug>(b: &'de [u8]) -> Option<T> {
-    match de::from_bytes(b) {
-        Ok(r) => Some(r),
-        Err(e) => {
-            println!("Error: {:?}", e);
-            None
-        }
-    }
-}
-
-fn decode_enum(s: &String) -> Option<Bencode> {
+fn decode_enum(s: &String) -> Option<Value> {
     match de::from_str(&s.as_str()) {
         Ok(r) => Some(r),
         _ => None,
     }
 }
 
-fn test_enum_enc_dec<T: Into<Bencode> + std::fmt::Debug>(x: T) {
-    let b = &x.into();
-    let s = encode(b);
-    match decode_bytes::<Bencode>(&s) {
-        Some(d) => assert_eq!(&d, b),
-        _ => panic!("encode and decode don't match"),
-    }
+fn test_enum_enc_dec<T: Into<Value>>(a: T) {
+    let a = a.into();
+    let a_bytes = encode(&a);
+    let b: Value = from_bytes(a_bytes.as_ref()).unwrap();
+    assert_eq!(a, b);
 }
 
 fn test_enum_dec_enc(s: &String) {
@@ -63,13 +49,13 @@ fn enc_dec_string() {
 
 #[test]
 fn enc_dec_enum_list_mixed() {
-    test_enum_enc_dec(Bencode::List(vec!["one".into(), "two".into(), "three".into(), 4i64.into()]));
+    test_enum_enc_dec(Value::List(vec!["one".into(), "two".into(), "three".into(), 4i64.into()]));
 }
 
 #[test]
 fn enc_dec_enum_list_nested() {
-    let l_grandchild = Bencode::List(vec!["two".into()]);
-    let l_child = Bencode::List(vec!["one".into(), l_grandchild]);
+    let l_grandchild = Value::List(vec!["two".into()]);
+    let l_child = Value::List(vec!["one".into(), l_grandchild]);
     test_enum_enc_dec(vec!["one".into(),
                            "two".into(),
                            "three".into(),
@@ -78,20 +64,18 @@ fn enc_dec_enum_list_nested() {
 }
 
 #[test]
-#[ignore]
 fn enc_dec_map() {
-    let mut m = BTreeMap::new();
+    let mut m = HashMap::new();
     m.insert("Mc".into(), "Burger".into());
     test_enum_enc_dec(m);
 }
 
 #[test]
-#[ignore]
 fn enc_dec_map_enum_mixed() {
-    let mut ma = BTreeMap::new();
+    let mut ma = HashMap::new();
     ma.insert("M jr.".into(), "nuggets".into());
-    let s = Bencode::List(vec!["one".into(), "two".into(), "three".into(), 4i64.into()]);
-    let mut m = BTreeMap::new();
+    let s = Value::List(vec!["one".into(), "two".into(), "three".into(), 4i64.into()]);
+    let mut m = HashMap::new();
     m.insert("Mc".into(), "Burger".into());
     m.insert("joint".into(), ma.into());
     m.insert("woah".into(), s);
@@ -134,7 +118,7 @@ fn serialize_bool() {
 #[test]
 fn deserialize_to_string() {
     let s = "3:yes";
-    let r: Result<String, BencodeError> = de::from_str(&s);
+    let r: Result<String> = de::from_str(&s);
     match r {
         Ok(v) => assert_eq!(v, "yes"),
         _ => panic!(),
@@ -144,7 +128,7 @@ fn deserialize_to_string() {
 #[test]
 fn deserialize_to_i64() {
     let s = "i666e";
-    let r: Result<i64, BencodeError> = de::from_str(&s);
+    let r: Result<i64> = de::from_str(&s);
     match r {
         Ok(v) => assert_eq!(v, 666),
         _ => panic!(),
@@ -154,7 +138,7 @@ fn deserialize_to_i64() {
 #[test]
 fn deserialize_to_vec() {
     let s = "li666ee";
-    let r: Result<Vec<i64>, BencodeError> = de::from_str(&s);
+    let r: Result<Vec<i64>> = de::from_str(&s);
     match r {
         Ok(v) => assert_eq!(v, [666]),
         _ => panic!(),
@@ -162,7 +146,6 @@ fn deserialize_to_vec() {
 }
 
 #[test]
-#[ignore]
 fn deserialize_to_freestyle() {
     let s = "li666e4:wontd3:onei666e4:yoyoli69ei89e4:yoyoeee";
     test_enum_dec_enc(&String::from_str(s).unwrap());
@@ -219,18 +202,11 @@ fn deserialize_to_struct() {
         y: String,
         x: i64,
     };
-    let r: Result<Fake, BencodeError>;
-    r = de::from_bytes(b);
-    match r {
-        Ok(r) => {
-            assert_eq!(r,
-                       Fake {
-                           x: 1111,
-                           y: String::from_str("dog").unwrap(),
-                       })
-        }
-        Err(e) => panic!("Error: {:?}", e),
-    }
+    assert_eq!(de::from_bytes::<Fake>(b).unwrap(),
+               Fake {
+                   x: 1111,
+                   y: String::from_str("dog").unwrap(),
+               });
 }
 
 #[test]
@@ -245,7 +221,7 @@ fn deserialize_to_struct_with_option() {
         #[serde(default)]
         a: Option<String>,
     };
-    let r: Result<Fake, BencodeError>;
+    let r: Result<Fake>;
     r = de::from_bytes(b);
     match r {
         Ok(r) => {
@@ -262,31 +238,26 @@ fn deserialize_to_struct_with_option() {
 }
 
 #[test]
-fn deserialize_to_bencode() {
+fn deserialize_to_value() {
     let b = "d1:xi1111e1:y3:doge".as_bytes();
-    #[derive(Debug, Deserialize)]
-    let r: Result<Bencode, BencodeError>;
-    r = de::from_bytes(b);
-    let mut d: BTreeMap<Bencode, Bencode> = BTreeMap::new();
+    let r: Value = de::from_bytes(b).unwrap();
+    let mut d = HashMap::new();
     d.insert("x".into(), 1111.into());
     d.insert("y".into(), "dog".into());
-    match r {
-        Ok(r) => assert_eq!(r, Bencode::Dict(d)),
-        Err(e) => panic!("Error: {:?}", e),
-    }
+    assert_eq!(r, Value::Dict(d));
 }
 
 #[test]
-fn deserialize_to_bencode_struct_mix() {
+fn deserialize_to_value_struct_mix() {
     let b = "d1:xi1111e1:y3:dog1:zi66e1:qli666eee".as_bytes();
     #[derive(PartialEq, Debug, Deserialize)]
     struct Fake {
         y: String,
         x: i64,
-        z: Bencode,
+        z: Value,
         q: Vec<i64>,
     };
-    let r: Result<Fake, BencodeError>;
+    let r: Result<Fake>;
     r = de::from_bytes(b);
     match r {
         Ok(r) => {
@@ -294,7 +265,7 @@ fn deserialize_to_bencode_struct_mix() {
                        Fake {
                            x: 1111,
                            y: String::from_str("dog").unwrap(),
-                           z: Bencode::Integer(66),
+                           z: Value::Int(66),
                            q: vec![666],
                        })
         }
@@ -359,7 +330,7 @@ fn serialize_some() {
 
 #[test]
 fn serialize_none() {
-    let f: Option<Bencode> = None;
+    let f: Option<Value> = None;
     let mut ser = Serializer::new();
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into_vec();
@@ -387,8 +358,8 @@ fn serialize_tuple_struct() {
 }
 
 #[test]
-fn readme_bencode_example() {
-    let list: Vec<Bencode> = vec!["one".into(), "two".into(), "three".into(), 4i64.into()];
+fn readme_value_example() {
+    let list: Vec<Value> = vec!["one".into(), "two".into(), "three".into(), 4i64.into()];
     let mut ser = Serializer::new();
     list.serialize(&mut ser).unwrap();
     let list_serialize: Vec<u8> = ser.into_vec();

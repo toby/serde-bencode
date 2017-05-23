@@ -81,10 +81,10 @@ pub struct SerializeMap<'a> {
 }
 
 impl<'a> SerializeMap<'a> {
-    pub fn new(ser: &'a mut Serializer) -> SerializeMap {
+    pub fn new(ser: &'a mut Serializer, len: usize) -> SerializeMap {
         SerializeMap {
             ser: ser,
-            entries: Vec::new(),
+            entries: Vec::with_capacity(len),
             cur_key: None,
         }
     }
@@ -274,8 +274,8 @@ impl<'a> ser::Serializer for &'a mut Serializer {
                                -> Result<Self> {
         Err(BencodeError::UnknownVariant("Tuple variant not supported.".to_string()))
     }
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        Ok(SerializeMap::new(self))
+    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap> {
+        Ok(SerializeMap::new(self, len.unwrap_or(0)))
     }
     fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
         self.serialize_map(Some(len))
