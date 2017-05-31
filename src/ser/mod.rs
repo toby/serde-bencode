@@ -312,3 +312,17 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Ok(SerializeMap::new(self, len))
     }
 }
+
+pub fn to_bytes<T: ser::Serialize>(b: &T) -> Result<Vec<u8>> {
+    let mut ser = Serializer::new();
+    b.serialize(&mut ser)?;
+    Ok(ser.into_vec())
+}
+
+pub fn to_string<T: ser::Serialize>(b: &T) -> Result<String> {
+    let mut ser = Serializer::new();
+    b.serialize(&mut ser)?;
+    str::from_utf8(ser.as_ref())
+        .map(|s| s.to_string())
+        .map_err(|_| Error::InvalidValue("Not an UTF-8".to_string()))
+}
