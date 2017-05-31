@@ -311,8 +311,8 @@ fn ser_de_variant_unit() {
         A,
         B,
     };
-    test_ser_de_eq(Mock::A);
-    test_ser_de_eq(Mock::B);
+    test_ser_de_eq(("pre".to_string(), Mock::A, "post".to_string()));
+    test_ser_de_eq(("pre".to_string(), Mock::B, "post".to_string()));
 }
 
 #[test]
@@ -322,8 +322,8 @@ fn ser_de_variant_newtype() {
         A(i64),
         B(i64),
     };
-    test_ser_de_eq(Mock::A(123));
-    test_ser_de_eq(Mock::B(321));
+    test_ser_de_eq(("pre".to_string(), Mock::A(123), "post".to_string()));
+    test_ser_de_eq(("pre".to_string(), Mock::B(321), "post".to_string()));
 }
 
 #[test]
@@ -333,8 +333,8 @@ fn ser_de_variant_tuple() {
         A(i64, i64),
         B(i64, i64),
     };
-    test_ser_de_eq(Mock::A(123, 321));
-    test_ser_de_eq(Mock::B(321, 123));
+    test_ser_de_eq(("pre".to_string(), Mock::A(123, 321), "post".to_string()));
+    test_ser_de_eq(("pre".to_string(), Mock::B(321, 123), "post".to_string()));
 }
 
 #[test]
@@ -344,8 +344,8 @@ fn ser_de_variant_struct() {
         A { a: i64, b: i64 },
         B { c: i64, d: i64 },
     };
-    test_ser_de_eq(Mock::A { a: 123, b: 321 });
-    test_ser_de_eq(Mock::B { c: 321, d: 123 });
+    test_ser_de_eq(("pre".to_string(), Mock::A { a: 123, b: 321 }, "post".to_string()));
+    test_ser_de_eq(("pre".to_string(), Mock::B { c: 321, d: 123 }, "post".to_string()));
 }
 
 #[test]
