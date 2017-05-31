@@ -202,7 +202,7 @@ impl<'de, R: Read> Deserializer<R> {
             b'l' => Ok(ParseResult::List),
             b'd' => Ok(ParseResult::Map),
             b'e' => Ok(ParseResult::End),
-            c @ _ => Err(Error::InvalidValue(format!("Invalid charackter `{}`", c as char))),
+            c @ _ => Err(Error::InvalidValue(format!("Invalid character `{}`", c as char))),
         }
     }
 }
