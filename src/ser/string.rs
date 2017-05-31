@@ -1,8 +1,8 @@
 use std::str;
 use std::fmt;
 use serde::ser;
-use serde::de::{self, Error};
-use error::{BencodeError, Result};
+use serde::de::{self};
+use error::{Error, Result};
 
 struct Expected;
 impl de::Expected for Expected {
@@ -12,7 +12,7 @@ impl de::Expected for Expected {
 }
 
 fn unexpected<T>(unexp: de::Unexpected) -> Result<T> {
-    Err(BencodeError::invalid_type(unexp, &Expected))
+    Err(de::Error::invalid_type(unexp, &Expected))
 }
 
 /// StringSerializer for serializing *just* strings (bytes are also strings in bencode).
@@ -22,14 +22,14 @@ pub struct StringSerializer;
 
 impl<'a> ser::Serializer for &'a mut StringSerializer {
     type Ok = Vec<u8>;
-    type Error = BencodeError;
-    type SerializeSeq = ser::Impossible<Vec<u8>, BencodeError>;
-    type SerializeTuple = ser::Impossible<Vec<u8>, BencodeError>;
-    type SerializeTupleStruct = ser::Impossible<Vec<u8>, BencodeError>;
-    type SerializeTupleVariant = ser::Impossible<Vec<u8>, BencodeError>;
-    type SerializeMap = ser::Impossible<Vec<u8>, BencodeError>;
-    type SerializeStruct = ser::Impossible<Vec<u8>, BencodeError>;
-    type SerializeStructVariant = ser::Impossible<Vec<u8>, BencodeError>;
+    type Error = Error;
+    type SerializeSeq = ser::Impossible<Vec<u8>, Error>;
+    type SerializeTuple = ser::Impossible<Vec<u8>, Error>;
+    type SerializeTupleStruct = ser::Impossible<Vec<u8>, Error>;
+    type SerializeTupleVariant = ser::Impossible<Vec<u8>, Error>;
+    type SerializeMap = ser::Impossible<Vec<u8>, Error>;
+    type SerializeStruct = ser::Impossible<Vec<u8>, Error>;
+    type SerializeStructVariant = ser::Impossible<Vec<u8>, Error>;
 
     fn serialize_bool(self, value: bool) -> Result<Vec<u8>> {
         unexpected(de::Unexpected::Bool(value))
@@ -106,16 +106,16 @@ impl<'a> ser::Serializer for &'a mut StringSerializer {
     fn serialize_some<T: ?Sized + ser::Serialize>(self, _value: &T) -> Result<Vec<u8>> {
         unexpected(de::Unexpected::Option)
     }
-    fn serialize_seq(self, _len: Option<usize>) -> Result<ser::Impossible<Vec<u8>, BencodeError>> {
+    fn serialize_seq(self, _len: Option<usize>) -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::Seq)
     }
-    fn serialize_tuple(self, _size: usize) -> Result<ser::Impossible<Vec<u8>, BencodeError>> {
+    fn serialize_tuple(self, _size: usize) -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::Seq)
     }
     fn serialize_tuple_struct(self,
                               _name: &'static str,
                               _len: usize)
-                              -> Result<ser::Impossible<Vec<u8>, BencodeError>> {
+                              -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::NewtypeStruct)
     }
     fn serialize_tuple_variant(self,
@@ -123,16 +123,16 @@ impl<'a> ser::Serializer for &'a mut StringSerializer {
                                _variant_index: u32,
                                _variant: &'static str,
                                _len: usize)
-                               -> Result<ser::Impossible<Vec<u8>, BencodeError>> {
+                               -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::TupleVariant)
     }
-    fn serialize_map(self, _len: Option<usize>) -> Result<ser::Impossible<Vec<u8>, BencodeError>> {
+    fn serialize_map(self, _len: Option<usize>) -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::Map)
     }
     fn serialize_struct(self,
                         _name: &'static str,
                         _len: usize)
-                        -> Result<ser::Impossible<Vec<u8>, BencodeError>> {
+                        -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::NewtypeStruct)
     }
     fn serialize_struct_variant(self,
@@ -140,7 +140,7 @@ impl<'a> ser::Serializer for &'a mut StringSerializer {
                                 _variant_index: u32,
                                 _variant: &'static str,
                                 _len: usize)
-                                -> Result<ser::Impossible<Vec<u8>, BencodeError>> {
+                                -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::StructVariant)
     }
 }

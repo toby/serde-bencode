@@ -3,7 +3,7 @@ mod string;
 use std::str;
 use std::mem;
 use serde::ser;
-use error::{BencodeError, Result};
+use error::{Error, Result};
 
 #[derive(Debug)]
 pub struct Serializer {
@@ -32,7 +32,7 @@ impl AsRef<[u8]> for Serializer {
 
 impl<'a> ser::SerializeSeq for &'a mut Serializer {
     type Ok = ();
-    type Error = BencodeError;
+    type Error = Error;
     fn serialize_element<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
@@ -44,7 +44,7 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
 
 impl<'a> ser::SerializeTuple for &'a mut Serializer {
     type Ok = ();
-    type Error = BencodeError;
+    type Error = Error;
     fn serialize_element<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
@@ -55,7 +55,7 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer {
 
 impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
     type Ok = ();
-    type Error = BencodeError;
+    type Error = Error;
     fn serialize_field<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
@@ -66,7 +66,7 @@ impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
 
 impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
     type Ok = ();
-    type Error = BencodeError;
+    type Error = Error;
     fn serialize_field<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
         value.serialize(&mut **self)
     }
@@ -93,7 +93,7 @@ impl<'a> SerializeMap<'a> {
 
     fn end_map(&mut self) -> Result<()> {
         if self.cur_key.is_some() {
-            return Err(BencodeError::InvalidValue("`serialize_key` called without calling  `serialize_value`".to_string()));
+            return Err(Error::InvalidValue("`serialize_key` called without calling  `serialize_value`".to_string()));
         }
         let mut entries = mem::replace(&mut self.entries, Vec::new());
         entries.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
@@ -109,16 +109,16 @@ impl<'a> SerializeMap<'a> {
 
 impl<'a> ser::SerializeMap for SerializeMap<'a> {
     type Ok = ();
-    type Error = BencodeError;
+    type Error = Error;
     fn serialize_key<T: ?Sized + ser::Serialize>(&mut self, key: &T) -> Result<()> {
         if self.cur_key.is_some() {
-            return Err(BencodeError::InvalidValue("`serialize_key` called multiple times without calling  `serialize_value`".to_string()));
+            return Err(Error::InvalidValue("`serialize_key` called multiple times without calling  `serialize_value`".to_string()));
         }
         self.cur_key = Some(key.serialize(&mut string::StringSerializer)?);
         Ok(())
     }
     fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
-        let key = self.cur_key.take().ok_or(BencodeError::InvalidValue("`serialize_value` called without calling `serialize_key`".to_string()))?;
+        let key = self.cur_key.take().ok_or(Error::InvalidValue("`serialize_value` called without calling `serialize_key`".to_string()))?;
         let mut ser = Serializer::new();
         value.serialize(&mut ser)?;
         let value = ser.into_vec();
@@ -132,7 +132,7 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
               V: ?Sized + ser::Serialize
     {
         if self.cur_key.is_some() {
-            return Err(BencodeError::InvalidValue("`serialize_key` called multiple times without calling  `serialize_value`".to_string()));
+            return Err(Error::InvalidValue("`serialize_key` called multiple times without calling  `serialize_value`".to_string()));
         }
         let key = key.serialize(&mut string::StringSerializer)?;
         let mut ser = Serializer::new();
@@ -150,7 +150,7 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
 
 impl<'a> ser::SerializeStruct for SerializeMap<'a> {
     type Ok = ();
-    type Error = BencodeError;
+    type Error = Error;
     fn serialize_field<T: ?Sized + ser::Serialize>(&mut self,
                                                    key: &'static str,
                                                    value: &T)
@@ -164,7 +164,7 @@ impl<'a> ser::SerializeStruct for SerializeMap<'a> {
 
 impl<'a> ser::SerializeStructVariant for SerializeMap<'a> {
     type Ok = ();
-    type Error = BencodeError;
+    type Error = Error;
     fn serialize_field<T: ?Sized + ser::Serialize>(&mut self,
                                                    key: &'static str,
                                                    value: &T)
@@ -180,7 +180,7 @@ impl<'a> ser::SerializeStructVariant for SerializeMap<'a> {
 
 impl<'a> ser::Serializer for &'a mut Serializer {
     type Ok = ();
-    type Error = BencodeError;
+    type Error = Error;
     type SerializeSeq = Self;
     type SerializeTuple = Self;
     type SerializeTupleStruct = Self;
@@ -220,10 +220,10 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         self.serialize_i64(value as i64)
     }
     fn serialize_f32(self, _value: f32) -> Result<()> {
-        Err(BencodeError::InvalidValue("Cannot serialize f32".to_string()))
+        Err(Error::InvalidValue("Cannot serialize f32".to_string()))
     }
     fn serialize_f64(self, _value: f64) -> Result<()> {
-        Err(BencodeError::InvalidValue("Cannot serialize f64".to_string()))
+        Err(Error::InvalidValue("Cannot serialize f64".to_string()))
     }
     fn serialize_char(self, value: char) -> Result<()> {
         self.serialize_bytes(&[value as u8])

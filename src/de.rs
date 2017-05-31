@@ -1,7 +1,7 @@
 use std::io::Read;
 use std::str;
 use serde::de;
-use error::{BencodeError, Result};
+use error::{Error, Result};
 
 pub struct BencodeAccess<'a, R: 'a + Read> {
     de: &'a mut Deserializer<R>,
@@ -14,7 +14,7 @@ impl<'a, R: 'a + Read> BencodeAccess<'a, R> {
 }
 
 impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
-    type Error = BencodeError;
+    type Error = Error;
 
     fn unit_variant(self) -> Result<()> {
         Ok(())
@@ -23,7 +23,7 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
     fn newtype_variant_seed<T: de::DeserializeSeed<'de>>(self, seed: T) -> Result<T::Value> {
         let res = seed.deserialize(&mut *self.de)?;
         if ParseResult::End != self.de.parse()? {
-            return Err(BencodeError::InvalidType("expected `d`".to_string()));
+            return Err(Error::InvalidType("expected `d`".to_string()));
         }
         Ok(res)
     }
@@ -31,7 +31,7 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
     fn tuple_variant<V: de::Visitor<'de>>(self, _: usize, visitor: V) -> Result<V::Value> {
         let res = de::Deserializer::deserialize_any(&mut *self.de, visitor)?;
         if ParseResult::End != self.de.parse()? {
-            return Err(BencodeError::InvalidType("expected `d`".to_string()));
+            return Err(Error::InvalidType("expected `d`".to_string()));
         }
         Ok(res)
     }
@@ -42,14 +42,14 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
                                            -> Result<V::Value> {
         let res = de::Deserializer::deserialize_any(&mut *self.de, visitor)?;
         if ParseResult::End != self.de.parse()? {
-            return Err(BencodeError::InvalidType("expected `d`".to_string()));
+            return Err(Error::InvalidType("expected `d`".to_string()));
         }
         Ok(res)
     }
 }
 
 impl<'de, 'a, R: 'a + Read> de::SeqAccess<'de> for BencodeAccess<'a, R> {
-    type Error = BencodeError;
+    type Error = Error;
 
     fn next_element_seed<T: de::DeserializeSeed<'de>>(&mut self,
                                                       seed: T)
@@ -65,7 +65,7 @@ impl<'de, 'a, R: 'a + Read> de::SeqAccess<'de> for BencodeAccess<'a, R> {
 }
 
 impl<'de, 'a, R: 'a + Read> de::MapAccess<'de> for BencodeAccess<'a, R> {
-    type Error = BencodeError;
+    type Error = Error;
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
         where K: de::DeserializeSeed<'de>
     {
@@ -86,7 +86,7 @@ impl<'de, 'a, R: 'a + Read> de::MapAccess<'de> for BencodeAccess<'a, R> {
 }
 
 impl<'de, 'a, R: 'a + Read> de::EnumAccess<'de> for BencodeAccess<'a, R> {
-    type Error = BencodeError;
+    type Error = Error;
     type Variant = Self;
     fn variant_seed<V: de::DeserializeSeed<'de>>(self, seed: V) -> Result<(V::Value, Self)> {
         match self.de.parse()? {
@@ -95,7 +95,7 @@ impl<'de, 'a, R: 'a + Read> de::EnumAccess<'de> for BencodeAccess<'a, R> {
                 Ok((seed.deserialize(&mut *self.de)?, self))
             }
             ParseResult::Map => Ok((seed.deserialize(&mut *self.de)?, self)),
-            _ => Err(BencodeError::EndOfStream), // FIXME
+            _ => Err(Error::EndOfStream), // FIXME
         }
     }
 }
@@ -133,18 +133,18 @@ impl<'de, R: Read> Deserializer<R> {
             if 1 !=
                self.reader
                    .read(&mut buf)
-                   .map_err(BencodeError::IoError)? {
-                return Err(BencodeError::EndOfStream);
+                   .map_err(Error::IoError)? {
+                return Err(Error::EndOfStream);
             }
             match buf[0] {
                 b'e' => {
                     let len_str = String::from_utf8(result)
                         .map_err(|_| {
-                                     BencodeError::InvalidValue("Non UTF-8 integer encoding"
+                                     Error::InvalidValue("Non UTF-8 integer encoding"
                                                                     .to_string())
                                  })?;
                     let len_int = len_str.parse()
-                        .map_err(|_| BencodeError::InvalidValue(format!("Can't parse `{}` as integer", len_str)))?;
+                        .map_err(|_| Error::InvalidValue(format!("Can't parse `{}` as integer", len_str)))?;
                     return Ok(len_int);
                 }
                 n => result.push(n),
@@ -160,18 +160,18 @@ impl<'de, R: Read> Deserializer<R> {
             if 1 !=
                self.reader
                    .read(&mut buf)
-                   .map_err(BencodeError::IoError)? {
-                return Err(BencodeError::EndOfStream);
+                   .map_err(Error::IoError)? {
+                return Err(Error::EndOfStream);
             }
             match buf[0] {
                 b':' => {
                     let len_str = String::from_utf8(len)
                         .map_err(|_| {
-                                     BencodeError::InvalidValue("Non UTF-8 integer encoding"
+                                     Error::InvalidValue("Non UTF-8 integer encoding"
                                                                     .to_string())
                                  })?;
                     let len_int = len_str.parse()
-                        .map_err(|_| BencodeError::InvalidValue(format!("Can't parse `{}` as string length", len_str)))?;
+                        .map_err(|_| Error::InvalidValue(format!("Can't parse `{}` as string length", len_str)))?;
                     return Ok(len_int);
                 }
                 n => len.push(n),
@@ -184,9 +184,9 @@ impl<'de, R: Read> Deserializer<R> {
         let mut buf = vec![0u8; len];
         let actual_len = self.reader
             .read(buf.as_mut_slice())
-            .map_err(BencodeError::IoError)?;
+            .map_err(Error::IoError)?;
         if len != actual_len {
-            return Err(BencodeError::EndOfStream);
+            return Err(Error::EndOfStream);
         }
         Ok(buf)
     }
@@ -196,8 +196,8 @@ impl<'de, R: Read> Deserializer<R> {
         if 1 !=
            self.reader
                .read(&mut buf)
-               .map_err(BencodeError::IoError)? {
-            return Err(BencodeError::EndOfStream);
+               .map_err(Error::IoError)? {
+            return Err(Error::EndOfStream);
         }
         match buf[0] {
             b'i' => Ok(ParseResult::Int(self.parse_int()?)),
@@ -205,13 +205,13 @@ impl<'de, R: Read> Deserializer<R> {
             b'l' => Ok(ParseResult::List),
             b'd' => Ok(ParseResult::Map),
             b'e' => Ok(ParseResult::End),
-            c @ _ => Err(BencodeError::InvalidValue(format!("Invalid charackter `{}`", c as char))),
+            c @ _ => Err(Error::InvalidValue(format!("Invalid charackter `{}`", c as char))),
         }
     }
 }
 
 impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
-    type Error = BencodeError;
+    type Error = Error;
 
     #[inline]
     fn deserialize_any<V: de::Visitor<'de>>(mut self, visitor: V) -> Result<V::Value> {
@@ -224,7 +224,7 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
             ParseResult::Bytes(s) => visitor.visit_bytes(s.as_ref()),
             ParseResult::List => visitor.visit_seq(BencodeAccess::new(&mut self)),
             ParseResult::Map => visitor.visit_map(BencodeAccess::new(&mut self)),
-            ParseResult::End => Err(BencodeError::EndOfStream),
+            ParseResult::End => Err(Error::EndOfStream),
         }
     }
 
