@@ -1,6 +1,7 @@
 mod string;
 
 use std::str;
+use std::mem;
 use serde::ser;
 use error::{BencodeError, Result};
 
@@ -36,7 +37,7 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
         value.serialize(&mut **self)
     }
     fn end(self) -> Result<()> {
-        self.push("e".as_bytes());
+        self.push("e");
         Ok(())
     }
 }
@@ -70,7 +71,8 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
         value.serialize(&mut **self)
     }
     fn end(self) -> Result<()> {
-        ser::SerializeSeq::end(self)
+        self.push("ee");
+        Ok(())
     }
 }
 
@@ -88,6 +90,21 @@ impl<'a> SerializeMap<'a> {
             cur_key: None,
         }
     }
+
+    fn end_map(&mut self) -> Result<()> {
+        if self.cur_key.is_some() {
+            return Err(BencodeError::InvalidValue("`serialize_key` called without calling  `serialize_value`".to_string()));
+        }
+        let mut entries = mem::replace(&mut self.entries, Vec::new());
+        entries.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
+        self.ser.push("d");
+        for (k, v) in entries {
+            ser::Serializer::serialize_bytes(&mut *self.ser, k.as_ref())?;
+            self.ser.push(v);
+        }
+        self.ser.push("e");
+        Ok(())
+    }
 }
 
 impl<'a> ser::SerializeMap for SerializeMap<'a> {
@@ -104,26 +121,30 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
         let key = self.cur_key.take().ok_or(BencodeError::InvalidValue("`serialize_value` called without calling `serialize_key`".to_string()))?;
         let mut ser = Serializer::new();
         value.serialize(&mut ser)?;
-        self.entries.push((key, ser.into_vec()));
+        let value = ser.into_vec();
+        if !value.is_empty() {
+            self.entries.push((key, value));
+        }
         Ok(())
     }
-    fn end(self) -> Result<()> {
+    fn serialize_entry<K, V>(&mut self, key: &K, value: &V) -> Result<()>
+        where K: ?Sized + ser::Serialize,
+              V: ?Sized + ser::Serialize
+    {
         if self.cur_key.is_some() {
-            return Err(BencodeError::InvalidValue("`serialize_key` called without calling  `serialize_value`".to_string()));
+            return Err(BencodeError::InvalidValue("`serialize_key` called multiple times without calling  `serialize_value`".to_string()));
         }
-        let SerializeMap {
-            mut ser,
-            mut entries,
-            ..
-        } = self;
-        entries.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
-        ser.push("d");
-        for (k, v) in entries {
-            ser::Serializer::serialize_bytes(&mut *ser, k.as_ref())?;
-            ser.push(v);
+        let key = key.serialize(&mut string::StringSerializer)?;
+        let mut ser = Serializer::new();
+        value.serialize(&mut ser)?;
+        let value = ser.into_vec();
+        if !value.is_empty() {
+            self.entries.push((key, value));
         }
-        ser.push("e");
         Ok(())
+    }
+    fn end(mut self) -> Result<()> {
+        self.end_map()
     }
 }
 
@@ -134,11 +155,10 @@ impl<'a> ser::SerializeStruct for SerializeMap<'a> {
                                                    key: &'static str,
                                                    value: &T)
                                                    -> Result<()> {
-        ser::SerializeMap::serialize_key(self, key)?;
-        ser::SerializeMap::serialize_value(self, value)
+        ser::SerializeMap::serialize_entry(self, key, value)
     }
-    fn end(self) -> Result<()> {
-        ser::SerializeMap::end(self)
+    fn end(mut self) -> Result<()> {
+        self.end_map()
     }
 }
 
@@ -149,10 +169,12 @@ impl<'a> ser::SerializeStructVariant for SerializeMap<'a> {
                                                    key: &'static str,
                                                    value: &T)
                                                    -> Result<()> {
-        ser::SerializeStruct::serialize_field(self, key, value)
+        ser::SerializeMap::serialize_entry(self, key, value)
     }
-    fn end(self) -> Result<()> {
-        ser::SerializeStruct::end(self)
+    fn end(mut self) -> Result<()> {
+        self.end_map()?;
+        self.ser.push("e");
+        Ok(())
     }
 }
 
@@ -180,11 +202,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         self.serialize_i64(value as i64)
     }
     fn serialize_i64(self, value: i64) -> Result<()> {
-        let mut token = Vec::new();
-        token.extend_from_slice(&"i".as_bytes());
-        token.extend_from_slice(&value.to_string().as_bytes());
-        token.extend_from_slice(&"e".as_bytes());
-        self.push(&token);
+        self.push("i");
+        self.push(value.to_string());
+        self.push("e");
         Ok(())
     }
     fn serialize_u8(self, value: u8) -> Result<()> {
@@ -212,11 +232,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         self.serialize_bytes(value.as_bytes())
     }
     fn serialize_bytes(self, value: &[u8]) -> Result<()> {
-        let mut token = Vec::new();
-        token.extend_from_slice(&value.len().to_string().as_bytes());
-        token.extend_from_slice(&":".as_bytes());
-        token.extend_from_slice(value);
-        self.push(&token);
+        self.push(value.len().to_string());
+        self.push(":");
+        self.push(value);
         Ok(())
     }
     fn serialize_unit(self) -> Result<()> {
@@ -228,9 +246,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_unit_variant(self,
                               _name: &'static str,
                               _variant_index: u32,
-                              _variant: &'static str)
+                              variant: &'static str)
                               -> Result<()> {
-        Err(BencodeError::UnknownVariant("Unit variant not supported.".to_string()))
+        self.serialize_str(variant)
     }
     fn serialize_newtype_struct<T: ?Sized + ser::Serialize>(self,
                                                             _name: &'static str,
@@ -241,25 +259,25 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_newtype_variant<T: ?Sized + ser::Serialize>(self,
                                                              _name: &'static str,
                                                              _variant_index: u32,
-                                                             _variant: &'static str,
+                                                             variant: &'static str,
                                                              value: &T)
                                                              -> Result<()> {
-        value.serialize(self)
+        self.push("d");
+        self.serialize_bytes(variant.as_bytes())?;
+        value.serialize(&mut *self)?;
+        self.push("e");
+        Ok(())
     }
     fn serialize_none(self) -> Result<()> {
-        self.push("".as_bytes());
         Ok(())
     }
     fn serialize_some<T: ?Sized + ser::Serialize>(self, value: &T) -> Result<()> {
         value.serialize(self)
     }
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self> {
-        self.push("l".as_bytes());
+        self.push("l");
         Ok(self)
     }
-    // fn serialize_seq_fixed_size(self, size: usize) -> Result<Self> {
-    //     self.serialize_seq(Some(size))
-    // }
     fn serialize_tuple(self, size: usize) -> Result<Self> {
         self.serialize_seq(Some(size))
     }
@@ -269,10 +287,13 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_tuple_variant(self,
                                _name: &'static str,
                                _variant_index: u32,
-                               _variant: &'static str,
+                               variant: &'static str,
                                _len: usize)
-                               -> Result<Self> {
-        Err(BencodeError::UnknownVariant("Tuple variant not supported.".to_string()))
+                               -> Result<Self::SerializeTupleVariant> {
+        self.push("d");
+        self.serialize_bytes(variant.as_bytes())?;
+        self.push("l");
+        Ok(self)
     }
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap> {
         Ok(SerializeMap::new(self, len.unwrap_or(0)))
@@ -283,9 +304,11 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_struct_variant(self,
                                 _name: &'static str,
                                 _variant_index: u32,
-                                _variant: &'static str,
-                                _len: usize)
+                                variant: &'static str,
+                                len: usize)
                                 -> Result<Self::SerializeStructVariant> {
-        Err(BencodeError::UnknownVariant("Struct variant not supported.".to_string()))
+        self.push("d");
+        self.serialize_bytes(variant.as_bytes())?;
+        Ok(SerializeMap::new(self, len))
     }
 }

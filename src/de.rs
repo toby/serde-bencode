@@ -16,23 +16,35 @@ impl<'a, R: 'a + Read> BencodeAccess<'a, R> {
 impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
     type Error = BencodeError;
 
-    fn newtype_variant_seed<T: de::DeserializeSeed<'de>>(self, seed: T) -> Result<T::Value> {
-        seed.deserialize(self.de)
-    }
-
     fn unit_variant(self) -> Result<()> {
-        Err(BencodeError::UnknownVariant("Unit variant not supported.".into()))
+        Ok(())
     }
 
-    fn tuple_variant<V: de::Visitor<'de>>(self, _: usize, _: V) -> Result<V::Value> {
-        Err(BencodeError::UnknownVariant("Tuple variant not supported.".into()))
+    fn newtype_variant_seed<T: de::DeserializeSeed<'de>>(self, seed: T) -> Result<T::Value> {
+        let res = seed.deserialize(&mut *self.de)?;
+        if ParseResult::End != self.de.parse()? {
+            return Err(BencodeError::InvalidType("expected `d`".to_string()));
+        }
+        Ok(res)
+    }
+
+    fn tuple_variant<V: de::Visitor<'de>>(self, _: usize, visitor: V) -> Result<V::Value> {
+        let res = de::Deserializer::deserialize_any(&mut *self.de, visitor)?;
+        if ParseResult::End != self.de.parse()? {
+            return Err(BencodeError::InvalidType("expected `d`".to_string()));
+        }
+        Ok(res)
     }
 
     fn struct_variant<V: de::Visitor<'de>>(self,
                                            _: &'static [&'static str],
-                                           _: V)
+                                           visitor: V)
                                            -> Result<V::Value> {
-        Err(BencodeError::UnknownVariant("Struct variant not supported.".into()))
+        let res = de::Deserializer::deserialize_any(&mut *self.de, visitor)?;
+        if ParseResult::End != self.de.parse()? {
+            return Err(BencodeError::InvalidType("expected `d`".to_string()));
+        }
+        Ok(res)
     }
 }
 
@@ -77,11 +89,18 @@ impl<'de, 'a, R: 'a + Read> de::EnumAccess<'de> for BencodeAccess<'a, R> {
     type Error = BencodeError;
     type Variant = Self;
     fn variant_seed<V: de::DeserializeSeed<'de>>(self, seed: V) -> Result<(V::Value, Self)> {
-        Ok((seed.deserialize(&mut *self.de)?, self))
+        match self.de.parse()? {
+            t @ ParseResult::Bytes(_) => {
+                self.de.next = Some(t);
+                Ok((seed.deserialize(&mut *self.de)?, self))
+            }
+            ParseResult::Map => Ok((seed.deserialize(&mut *self.de)?, self)),
+            _ => Err(BencodeError::EndOfStream), // FIXME
+        }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 enum ParseResult {
     Int(i64),
     Bytes(Vec<u8>),
@@ -163,9 +182,12 @@ impl<'de, R: Read> Deserializer<R> {
     fn parse_bytes(&mut self, len_char: u8) -> Result<Vec<u8>> {
         let len = self.parse_bytes_len(len_char)?;
         let mut buf = vec![0u8; len];
-        self.reader
+        let actual_len = self.reader
             .read(buf.as_mut_slice())
             .map_err(BencodeError::IoError)?;
+        if len != actual_len {
+            return Err(BencodeError::EndOfStream);
+        }
         Ok(buf)
     }
 
@@ -209,12 +231,23 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     forward_to_deserialize_any! {
         i64 string seq bool i8 i16 i32 u8 u16 u32
         u64 f32 f64 char str unit bytes byte_buf map unit_struct tuple_struct tuple
-        newtype_struct ignored_any identifier struct enum
+        newtype_struct ignored_any identifier struct
     }
 
     #[inline]
     fn deserialize_option<V: de::Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         visitor.visit_some(self)
+    }
+
+    #[inline]
+    fn deserialize_enum<V>(self,
+                           _name: &str,
+                           _variants: &'static [&'static str],
+                           visitor: V)
+                           -> Result<V::Value>
+        where V: de::Visitor<'de>
+    {
+        visitor.visit_enum(BencodeAccess::new(self))
     }
 }
 
