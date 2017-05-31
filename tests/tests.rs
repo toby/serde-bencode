@@ -7,9 +7,11 @@ use serde_bencode::value::Value;
 use serde_bencode::de::{self, from_bytes};
 use serde_bencode::ser::Serializer;
 use serde_bencode::error::Result;
+use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 use std::str::FromStr;
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 fn encode<T: Serialize>(b: &T) -> Vec<u8> {
     let mut ser = Serializer::new();
@@ -35,6 +37,16 @@ fn test_enum_dec_enc(s: &String) {
     let d = decode_enum(s);
     let e = encode(&d.unwrap());
     assert_eq!(&s.as_bytes().to_vec(), &e);
+}
+
+fn test_ser_de_eq<T>(a: T)
+    where T: Serialize + DeserializeOwned + Debug + Eq
+{
+    let mut ser = Serializer::new();
+    a.serialize(&mut ser).unwrap();
+    println!("bytes: {:?}", String::from_utf8_lossy(ser.as_ref()));
+    let b: T = from_bytes(ser.as_ref()).unwrap();
+    assert_eq!(a, b);
 }
 
 #[test]
@@ -161,7 +173,6 @@ fn trailing_chars() {
 }
 
 #[test]
-#[ignore]
 fn stop_short() {
     let s = "3:we";
     let r = decode_enum(&String::from_str(s).unwrap());
@@ -307,19 +318,6 @@ fn serialize_newtype_struct() {
 }
 
 #[test]
-fn serialize_newtype_variant() {
-    #[derive(Serialize)]
-    enum Fake {
-        Test(i32),
-    };
-    let f = Fake::Test(66);
-    let mut ser = Serializer::new();
-    f.serialize(&mut ser).unwrap();
-    let r: Vec<u8> = ser.into_vec();
-    assert_eq!(String::from_utf8(r).unwrap(), "i66e");
-}
-
-#[test]
 fn serialize_some() {
     let f = Some(1);
     let mut ser = Serializer::new();
@@ -368,7 +366,6 @@ fn readme_value_example() {
 }
 
 #[test]
-#[ignore]
 fn struct_none_vals() {
     #[derive(Serialize)]
     struct Fake {
@@ -383,4 +380,48 @@ fn struct_none_vals() {
     f.serialize(&mut ser).unwrap();
     let r: Vec<u8> = ser.into_vec();
     assert_eq!(String::from_utf8(r).unwrap(), "d1:bi1ee");
+}
+
+#[test]
+fn ser_de_variant_unit() {
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+    enum Mock {
+        A,
+        B,
+    };
+    test_ser_de_eq(Mock::A);
+    test_ser_de_eq(Mock::B);
+}
+
+#[test]
+fn ser_de_variant_newtype() {
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+    enum Mock {
+        A(i64),
+        B(i64),
+    };
+    test_ser_de_eq(Mock::A(123));
+    test_ser_de_eq(Mock::B(321));
+}
+
+#[test]
+fn ser_de_variant_tuple() {
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+    enum Mock {
+        A(i64, i64),
+        B(i64, i64),
+    };
+    test_ser_de_eq(Mock::A(123, 321));
+    test_ser_de_eq(Mock::B(321, 123));
+}
+
+#[test]
+fn ser_de_variant_struct() {
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+    enum Mock {
+        A { a: i64, b: i64 },
+        B { c: i64, d: i64 },
+    };
+    test_ser_de_eq(Mock::A { a: 123, b: 321 });
+    test_ser_de_eq(Mock::B { c: 321, d: 123 });
 }
