@@ -95,7 +95,7 @@ impl<'de, 'a, R: 'a + Read> de::EnumAccess<'de> for BencodeAccess<'a, R> {
                 Ok((seed.deserialize(&mut *self.de)?, self))
             }
             ParseResult::Map => Ok((seed.deserialize(&mut *self.de)?, self)),
-            _ => Err(Error::EndOfStream), // FIXME
+            t @ _ => Err(Error::InvalidValue(format!("Expected bytes or map; got `{:?}`", t))),
         }
     }
 }
