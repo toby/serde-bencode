@@ -118,7 +118,10 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
         Ok(())
     }
     fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
-        let key = self.cur_key.take().ok_or(Error::InvalidValue("`serialize_value` called without calling `serialize_key`".to_string()))?;
+        let key = self.cur_key
+            .take()
+            .ok_or(Error::InvalidValue("`serialize_value` called without calling `serialize_key`"
+                                           .to_string()))?;
         let mut ser = Serializer::new();
         value.serialize(&mut ser)?;
         let value = ser.into_vec();

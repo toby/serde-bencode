@@ -130,21 +130,23 @@ impl<'de, R: Read> Deserializer<R> {
         let mut buf = [0; 1];
         let mut result = Vec::new();
         loop {
-            if 1 !=
-               self.reader
-                   .read(&mut buf)
-                   .map_err(Error::IoError)? {
+            if 1 != self.reader.read(&mut buf).map_err(Error::IoError)? {
                 return Err(Error::EndOfStream);
             }
             match buf[0] {
                 b'e' => {
-                    let len_str = String::from_utf8(result)
+                    let len_str =
+                        String::from_utf8(result)
+                            .map_err(|_| {
+                                         Error::InvalidValue("Non UTF-8 integer encoding"
+                                                                 .to_string())
+                                     })?;
+                    let len_int = len_str
+                        .parse()
                         .map_err(|_| {
-                                     Error::InvalidValue("Non UTF-8 integer encoding"
-                                                                    .to_string())
+                                     Error::InvalidValue(format!("Can't parse `{}` as integer",
+                                                                 len_str))
                                  })?;
-                    let len_int = len_str.parse()
-                        .map_err(|_| Error::InvalidValue(format!("Can't parse `{}` as integer", len_str)))?;
                     return Ok(len_int);
                 }
                 n => result.push(n),
@@ -157,19 +159,17 @@ impl<'de, R: Read> Deserializer<R> {
         let mut len = Vec::new();
         len.push(len_char);
         loop {
-            if 1 !=
-               self.reader
-                   .read(&mut buf)
-                   .map_err(Error::IoError)? {
+            if 1 != self.reader.read(&mut buf).map_err(Error::IoError)? {
                 return Err(Error::EndOfStream);
             }
             match buf[0] {
                 b':' => {
-                    let len_str = String::from_utf8(len)
-                        .map_err(|_| {
-                                     Error::InvalidValue("Non UTF-8 integer encoding"
-                                                                    .to_string())
-                                 })?;
+                    let len_str =
+                        String::from_utf8(len)
+                            .map_err(|_| {
+                                         Error::InvalidValue("Non UTF-8 integer encoding"
+                                                                 .to_string())
+                                     })?;
                     let len_int = len_str.parse()
                         .map_err(|_| Error::InvalidValue(format!("Can't parse `{}` as string length", len_str)))?;
                     return Ok(len_int);
@@ -193,10 +193,7 @@ impl<'de, R: Read> Deserializer<R> {
 
     fn parse(&mut self) -> Result<ParseResult> {
         let mut buf = [0; 1];
-        if 1 !=
-           self.reader
-               .read(&mut buf)
-               .map_err(Error::IoError)? {
+        if 1 != self.reader.read(&mut buf).map_err(Error::IoError)? {
             return Err(Error::EndOfStream);
         }
         match buf[0] {

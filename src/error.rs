@@ -48,14 +48,14 @@ impl DeError for Error {
 
     fn unknown_variant(field: &str, expected: &'static [&'static str]) -> Self {
         Error::UnknownVariant(format!("Unknown Variant: `{}` (expected one of: {:?})",
-                                             field,
-                                             expected))
+                                      field,
+                                      expected))
     }
 
     fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
         Error::UnknownField(format!("Unknown Field: `{}` (expected one of: {:?})",
-                                           field,
-                                           expected))
+                                    field,
+                                    expected))
     }
 
     fn missing_field(field: &'static str) -> Self {

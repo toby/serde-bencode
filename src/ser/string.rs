@@ -1,7 +1,7 @@
 use std::str;
 use std::fmt;
 use serde::ser;
-use serde::de::{self};
+use serde::de;
 use error::{Error, Result};
 
 struct Expected;
