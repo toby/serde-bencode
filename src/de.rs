@@ -5,12 +5,11 @@ use error::{Error, Result};
 
 pub struct BencodeAccess<'a, R: 'a + Read> {
     de: &'a mut Deserializer<R>,
-    len: Option<usize>,
 }
 
 impl<'a, R: 'a + Read> BencodeAccess<'a, R> {
-    fn new(de: &'a mut Deserializer<R>, len: Option<usize>) -> BencodeAccess<'a, R> {
-        BencodeAccess { de: de, len: len }
+    fn new(de: &'a mut Deserializer<R>) -> BencodeAccess<'a, R> {
+        BencodeAccess { de: de }
     }
 }
 
@@ -20,29 +19,19 @@ impl<'de, 'a, R: 'a + Read> de::SeqAccess<'de> for BencodeAccess<'a, R> {
     fn next_element_seed<T: de::DeserializeSeed<'de>>(&mut self,
                                                       seed: T)
                                                       -> Result<Option<T::Value>> {
-        let res = match self.de.parse()? {
+        match self.de.parse()? {
             ParseResult::End => Ok(None),
             r @ _ => {
                 self.de.next = Some(r);
                 Ok(Some(seed.deserialize(&mut *self.de)?))
             }
-        };
-        match self.len {
-            Some(l) => {
-                let l = l - 1;
-                self.len = Some(l);
-                if l == 0 && ParseResult::End != self.de.parse()? {
-                    return Err(Error::InvalidType("expected `e`".to_string()));
-                }
-            }
-            None => (),
         }
-        res
     }
 }
 
 impl<'de, 'a, R: 'a + Read> de::MapAccess<'de> for BencodeAccess<'a, R> {
     type Error = Error;
+
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
         where K: de::DeserializeSeed<'de>
     {
@@ -71,23 +60,20 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
 
     fn newtype_variant_seed<T: de::DeserializeSeed<'de>>(self, seed: T) -> Result<T::Value> {
         let res = seed.deserialize(&mut *self.de)?;
-        if ParseResult::End != self.de.parse()? {
-            return Err(Error::InvalidType("expected `e`".to_string()));
-        }
+        self.de.expect(&[ParseToken::End])?;
         Ok(res)
     }
 
-    fn tuple_variant<V: de::Visitor<'de>>(self, len: usize, visitor: V) -> Result<V::Value> {
-        let res = match self.de.parse()? {
+    fn tuple_variant<V: de::Visitor<'de>>(self, _len: usize, visitor: V) -> Result<V::Value> {
+        let res = match self.de.expect(&[ParseToken::List])? {
             ParseResult::List => {
-                visitor
-                    .visit_seq(BencodeAccess::new(&mut *self.de, Some(len)))?
+                let res = visitor.visit_seq(BencodeAccess::new(&mut *self.de))?;
+                self.de.expect(&[ParseToken::End])?;
+                res
             }
-            _ => return Err(Error::InvalidType("expected list".to_string())),
+            _ => unreachable!(),
         };
-        if ParseResult::End != self.de.parse()? {
-            return Err(Error::InvalidType("expected `e`".to_string()));
-        }
+        self.de.expect(&[ParseToken::End])?;
         Ok(res)
     }
 
@@ -96,9 +82,7 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
                                            visitor: V)
                                            -> Result<V::Value> {
         let res = de::Deserializer::deserialize_any(&mut *self.de, visitor)?;
-        if ParseResult::End != self.de.parse()? {
-            return Err(Error::InvalidType("expected `e`".to_string()));
-        }
+        self.de.expect(&[ParseToken::End])?;
         Ok(res)
     }
 }
@@ -106,16 +90,30 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
 impl<'de, 'a, R: 'a + Read> de::EnumAccess<'de> for BencodeAccess<'a, R> {
     type Error = Error;
     type Variant = Self;
+
     fn variant_seed<V: de::DeserializeSeed<'de>>(self, seed: V) -> Result<(V::Value, Self)> {
-        match self.de.parse()? {
+        match self.de.expect(&[ParseToken::Bytes, ParseToken::Map])? {
             t @ ParseResult::Bytes(_) => {
                 self.de.next = Some(t);
                 Ok((seed.deserialize(&mut *self.de)?, self))
             }
             ParseResult::Map => Ok((seed.deserialize(&mut *self.de)?, self)),
-            t @ _ => Err(Error::InvalidValue(format!("Expected bytes or map; got `{:?}`", t))),
+            _ => unreachable!(),
         }
     }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+enum ParseToken {
+    Int,
+    Bytes,
+    /// list start
+    List,
+    /// map start
+    Map,
+    /// list or map end
+    End,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -226,18 +224,32 @@ impl<'de, R: Read> Deserializer<R> {
             c @ _ => Err(Error::InvalidValue(format!("Invalid character `{}`", c as char))),
         }
     }
+
+    fn expect(&mut self, expected: &[ParseToken]) -> Result<ParseResult> {
+        let cur = self.parse()?;
+        for e in expected {
+            match (*e, &cur) {
+                (ParseToken::Int, &ParseResult::Int(_)) |
+                (ParseToken::Bytes, &ParseResult::Bytes(_)) |
+                (ParseToken::List, &ParseResult::List) |
+                (ParseToken::Map, &ParseResult::Map) |
+                (ParseToken::End, &ParseResult::End) => return Ok(cur),
+                _ => (),
+            }
+        }
+        Err(Error::InvalidValue(format!("Expected one of {:?}; got `{:?}`", expected, cur)))
+    }
 }
 
 impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     type Error = Error;
 
-    #[inline]
     fn deserialize_any<V: de::Visitor<'de>>(mut self, visitor: V) -> Result<V::Value> {
         match self.parse()? {
             ParseResult::Int(i) => visitor.visit_i64(i),
             ParseResult::Bytes(s) => visitor.visit_bytes(s.as_ref()),
-            ParseResult::List => visitor.visit_seq(BencodeAccess::new(&mut self, None)),
-            ParseResult::Map => visitor.visit_map(BencodeAccess::new(&mut self, None)),
+            ParseResult::List => visitor.visit_seq(BencodeAccess::new(&mut self)),
+            ParseResult::Map => visitor.visit_map(BencodeAccess::new(&mut self)),
             ParseResult::End => Err(Error::EndOfStream),
         }
     }
@@ -261,7 +273,7 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
                            -> Result<V::Value>
         where V: de::Visitor<'de>
     {
-        visitor.visit_enum(BencodeAccess::new(self, None))
+        visitor.visit_enum(BencodeAccess::new(self))
     }
 }
 

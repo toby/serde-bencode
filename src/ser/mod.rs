@@ -4,19 +4,20 @@ use std::str;
 use std::mem;
 use serde::ser;
 use error::{Error, Result};
+use smallvec::SmallVec;
 
 #[derive(Debug)]
 pub struct Serializer {
-    buf: Vec<u8>,
+    buf: SmallVec<[u8; 16]>,
 }
 
 impl Serializer {
     pub fn new() -> Serializer {
-        Serializer { buf: Vec::new() }
+        Serializer { buf: SmallVec::new() }
     }
 
     pub fn into_vec(self) -> Vec<u8> {
-        self.buf
+        self.buf.into_vec()
     }
 
     fn push<T: AsRef<[u8]>>(&mut self, token: T) {
@@ -78,12 +79,12 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
 
 pub struct SerializeMap<'a> {
     ser: &'a mut Serializer,
-    entries: Vec<(Vec<u8>, Vec<u8>)>,
-    cur_key: Option<Vec<u8>>,
+    entries: Vec<(SmallVec<[u8; 16]>, SmallVec<[u8; 16]>)>,
+    cur_key: Option<SmallVec<[u8; 16]>>,
 }
 
 impl<'a> SerializeMap<'a> {
-    pub fn new(ser: &'a mut Serializer, len: usize) -> SerializeMap {
+    fn new(ser: &'a mut Serializer, len: usize) -> SerializeMap {
         SerializeMap {
             ser: ser,
             entries: Vec::with_capacity(len),
@@ -124,7 +125,7 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
                                            .to_string()))?;
         let mut ser = Serializer::new();
         value.serialize(&mut ser)?;
-        let value = ser.into_vec();
+        let value = ser.buf;
         if !value.is_empty() {
             self.entries.push((key, value));
         }
@@ -140,7 +141,7 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
         let key = key.serialize(&mut string::StringSerializer)?;
         let mut ser = Serializer::new();
         value.serialize(&mut ser)?;
-        let value = ser.into_vec();
+        let value = ser.buf;
         if !value.is_empty() {
             self.entries.push((key, value));
         }
@@ -205,8 +206,10 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         self.serialize_i64(value as i64)
     }
     fn serialize_i64(self, value: i64) -> Result<()> {
+        let value_str = value.to_string();
+        self.buf.reserve(value_str.len() + 2);
         self.push("i");
-        self.push(value.to_string());
+        self.push(value_str);
         self.push("e");
         Ok(())
     }
@@ -235,7 +238,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         self.serialize_bytes(value.as_bytes())
     }
     fn serialize_bytes(self, value: &[u8]) -> Result<()> {
-        self.push(value.len().to_string());
+        let len_str = value.len().to_string();
+        self.buf.reserve(len_str.len() + value.len() + 1);
+        self.push(len_str);
         self.push(":");
         self.push(value);
         Ok(())
@@ -244,7 +249,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Ok(())
     }
     fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
-        self.serialize_unit()
+        Ok(())
     }
     fn serialize_unit_variant(self,
                               _name: &'static str,
