@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate serde;
 extern crate serde_bytes;
+extern crate smallvec;
 
 pub mod error;
 pub mod ser;

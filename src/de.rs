@@ -31,6 +31,7 @@ impl<'de, 'a, R: 'a + Read> de::SeqAccess<'de> for BencodeAccess<'a, R> {
 
 impl<'de, 'a, R: 'a + Read> de::MapAccess<'de> for BencodeAccess<'a, R> {
     type Error = Error;
+
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
         where K: de::DeserializeSeed<'de>
     {
@@ -89,6 +90,7 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
 impl<'de, 'a, R: 'a + Read> de::EnumAccess<'de> for BencodeAccess<'a, R> {
     type Error = Error;
     type Variant = Self;
+
     fn variant_seed<V: de::DeserializeSeed<'de>>(self, seed: V) -> Result<(V::Value, Self)> {
         match self.de.expect(&[ParseToken::Bytes, ParseToken::Map])? {
             t @ ParseResult::Bytes(_) => {
@@ -242,7 +244,6 @@ impl<'de, R: Read> Deserializer<R> {
 impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     type Error = Error;
 
-    #[inline]
     fn deserialize_any<V: de::Visitor<'de>>(mut self, visitor: V) -> Result<V::Value> {
         match self.parse()? {
             ParseResult::Int(i) => visitor.visit_i64(i),
