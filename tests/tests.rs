@@ -252,10 +252,11 @@ fn serialize_lexical_sorted_keys() {
 
 #[test]
 fn serialize_newtype_struct() {
-    #[derive(Serialize)]
+    #[derive(Serialize,Deserialize,Debug,Eq,PartialEq)]
     struct Fake(i32);
     let f = Fake(66);
     assert_eq!(to_string(&f).unwrap(), "i66e");
+    test_ser_de_eq(f);
 }
 
 #[test]
