@@ -245,7 +245,12 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     forward_to_deserialize_any! {
         i64 string seq bool i8 i16 i32 u8 u16 u32
         u64 f32 f64 char str unit bytes byte_buf map unit_struct tuple_struct tuple
-        newtype_struct ignored_any identifier struct
+        ignored_any identifier struct
+    }
+
+    #[inline]
+    fn deserialize_newtype_struct<V: de::Visitor<'de>>(self, _name: &'static str, visitor: V) -> Result<V::Value> {
+        visitor.visit_newtype_struct(self)
     }
 
     #[inline]
