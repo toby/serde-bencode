@@ -93,6 +93,16 @@ fn serialize_str() {
 }
 
 #[test]
+fn serialize_ascii_char() {
+    assert_eq!(to_string(&'a').unwrap(), "1:a");
+}
+
+#[test]
+fn serialize_uncode_char() {
+    assert_eq!(to_string(&'\u{1F9D0}').unwrap(), "4:\u{01F9D0}");
+}
+
+#[test]
 fn serialize_bool() {
     assert_eq!(to_string(&false).unwrap(), "i0e");
     assert_eq!(to_string(&true).unwrap(), "i1e");

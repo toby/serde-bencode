@@ -229,8 +229,10 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Err(Error::InvalidValue("Cannot serialize f64".to_string()))
     }
     fn serialize_char(self, value: char) -> Result<()> {
-        self.serialize_bytes(&[value as u8])
+        let mut buffer = [0; 4];
+        self.serialize_bytes(value.encode_utf8(&mut buffer).as_bytes())
     }
+
     fn serialize_str(self, value: &str) -> Result<()> {
         self.serialize_bytes(value.as_bytes())
     }
