@@ -9,7 +9,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-serde_bencode = "^0.2.0"
+serde_bencode = "^0.2.1"
 serde = "^1.0.0"
 serde_derive = "^1.0.0"
 ```
