@@ -27,10 +27,10 @@ impl ser::Serialize for Value {
                 }
                 seq.end()
             }
-            Value::Dict(ref v) => {
-                let mut map = s.serialize_map(Some(v.len()))?;
-                for (k, v) in v {
-                    map.serialize_entry(&Bytes::from(k.as_ref()), v)?;
+            Value::Dict(ref vs) => {
+                let mut map = s.serialize_map(Some(vs.len()))?;
+                for (k, v) in vs {
+                    map.serialize_entry(&Bytes::new(k), v)?;
                 }
                 map.end()
             }
@@ -92,7 +92,7 @@ impl<'de> de::Visitor<'de> for ValueVisitor {
     {
         let mut map = HashMap::new();
         while let Some((k, v)) = access.next_entry::<ByteBuf, _>()? {
-            map.insert(k.into(), v);
+            map.insert(k.into_vec(), v);
         }
         Ok(Value::Dict(map))
     }

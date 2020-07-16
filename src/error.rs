@@ -34,15 +34,15 @@ impl DeError for Error {
         Error::Custom(msg.to_string())
     }
 
-    fn invalid_type(unexp: Unexpected, exp: &Expected) -> Self {
+    fn invalid_type(unexp: Unexpected, exp: &dyn Expected) -> Self {
         Error::InvalidType(format!("Invalid Type: {} (expected: `{}`)", unexp, exp))
     }
 
-    fn invalid_value(unexp: Unexpected, exp: &Expected) -> Self {
+    fn invalid_value(unexp: Unexpected, exp: &dyn Expected) -> Self {
         Error::InvalidValue(format!("Invalid Value: {} (expected: `{}`)", unexp, exp))
     }
 
-    fn invalid_length(len: usize, exp: &Expected) -> Self {
+    fn invalid_length(len: usize, exp: &dyn Expected) -> Self {
         Error::InvalidLength(format!("Invalid Length: {} (expected: {})", len, exp))
     }
 
@@ -68,22 +68,7 @@ impl DeError for Error {
 }
 
 impl StdError for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::IoError(ref error) => StdError::description(error),
-            Error::InvalidType(ref s) => s,
-            Error::InvalidValue(ref s) => s,
-            Error::InvalidLength(ref s) => s,
-            Error::UnknownVariant(ref s) => s,
-            Error::UnknownField(ref s) => s,
-            Error::MissingField(ref s) => s,
-            Error::DuplicateField(ref s) => s,
-            Error::Custom(ref s) => s,
-            Error::EndOfStream => "End of stream",
-        }
-    }
-
-    fn cause(&self) -> Option<&StdError> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match *self {
             Error::IoError(ref error) => Some(error),
             _ => None,
@@ -93,6 +78,18 @@ impl StdError for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(self.description())
+        let message = match *self {
+            Error::IoError(ref error) => {return error.fmt(f)},
+            Error::InvalidType(ref s) => s,
+            Error::InvalidValue(ref s) => s,
+            Error::InvalidLength(ref s) => s,
+            Error::UnknownVariant(ref s) => s,
+            Error::UnknownField(ref s) => s,
+            Error::MissingField(ref s) => s,
+            Error::DuplicateField(ref s) => s,
+            Error::Custom(ref s) => s,
+            Error::EndOfStream => "End of stream",
+        };
+        f.write_str(message)
     }
 }
