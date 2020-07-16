@@ -1,6 +1,3 @@
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
 extern crate serde_bencode;
 
 use serde_bencode::value::Value;
@@ -8,7 +5,8 @@ use serde_bencode::de::{from_bytes, from_str};
 use serde_bencode::ser::{Serializer, to_bytes, to_string};
 use serde_bencode::error::Result;
 use serde::de::DeserializeOwned;
-use serde::ser::Serialize;
+use serde::{Serialize, Deserialize};
+use serde_derive::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
 

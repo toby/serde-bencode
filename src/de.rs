@@ -1,7 +1,7 @@
 use std::io::Read;
 use std::str;
-use serde::de;
-use error::{Error, Result};
+use serde::{de, forward_to_deserialize_any};
+use crate::error::{Error, Result};
 
 pub struct BencodeAccess<'a, R: 'a + Read> {
     de: &'a mut Deserializer<R>,
@@ -219,7 +219,7 @@ impl<'de, R: Read> Deserializer<R> {
         }
         match buf[0] {
             b'i' => Ok(ParseResult::Int(self.parse_int()?)),
-            n @ b'0'...b'9' => Ok(ParseResult::Bytes(self.parse_bytes(n)?)),
+            n @ b'0'..=b'9' => Ok(ParseResult::Bytes(self.parse_bytes(n)?)),
             b'l' => Ok(ParseResult::List),
             b'd' => Ok(ParseResult::Map),
             b'e' => Ok(ParseResult::End),

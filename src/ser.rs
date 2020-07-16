@@ -3,7 +3,7 @@ mod string;
 use std::str;
 use std::mem;
 use serde::ser;
-use error::{Error, Result};
+use crate::error::{Error, Result};
 
 #[derive(Debug)]
 pub struct Serializer {
