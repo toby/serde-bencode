@@ -4,11 +4,19 @@ use serde::de;
 use serde::ser::{self, SerializeSeq, SerializeMap};
 use serde_bytes::{Bytes, ByteBuf};
 
+/// All possible values which may be serialized in bencode.
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Value {
+    /// A generic list of bytes.
     Bytes(Vec<u8>),
+
+    /// An integer.
     Int(i64),
+
+    /// A list of other bencoded values.
     List(Vec<Value>),
+
+    /// A map of (key, value) pairs.
     Dict(HashMap<Vec<u8>, Value>),
 }
 
