@@ -5,16 +5,19 @@ use std::mem;
 use serde::ser;
 use crate::error::{Error, Result};
 
+/// A structure for serializing Rust values into bencode.
 #[derive(Debug)]
 pub struct Serializer {
     buf: Vec<u8>,
 }
 
 impl Serializer {
+    /// Create a new serializer.
     pub fn new() -> Serializer {
         Serializer { buf: Vec::new() }
     }
 
+    /// Consume the serializer and return the contents as a vector.
     pub fn into_vec(self) -> Vec<u8> {
         self.buf
     }
@@ -76,6 +79,8 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
     }
 }
 
+#[doc(hidden)]
+// TODO: This should be pub(crate).
 pub struct SerializeMap<'a> {
     ser: &'a mut Serializer,
     entries: Vec<(Vec<u8>, Vec<u8>)>,
@@ -318,12 +323,65 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 }
 
+/// Serialize the given data into a bencode byte vector.
+/// 
+/// # Examples
+/// ```
+/// # fn main() -> Result<(), serde_bencode::Error> {
+/// use serde_derive::{Serialize, Deserialize};
+///
+/// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+/// struct Address {
+///     street: String,
+///     city: String,
+/// }
+///
+/// let address = Address {
+///     street: "1313 Webfoot Walk".to_string(),
+///     city: "Duckburg, Calisota".to_string(),
+/// };
+///
+/// let bytes = serde_bencode::to_bytes(&address)?;
+/// assert_eq!(
+///     String::from_utf8(bytes),
+///     Ok("d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".to_string()),
+/// );
+/// # Ok(())
+/// # }
+/// ```
+// TODO: List possible errors.
 pub fn to_bytes<T: ser::Serialize>(b: &T) -> Result<Vec<u8>> {
     let mut ser = Serializer::new();
     b.serialize(&mut ser)?;
     Ok(ser.into_vec())
 }
 
+/// Serialize the given data into a String of bencode.
+///
+/// # Examples
+/// ```
+/// # fn main() -> Result<(), serde_bencode::Error> {
+/// use serde_derive::{Serialize, Deserialize};
+///
+/// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+/// struct Address {
+///     street: String,
+///     city: String,
+/// }
+///
+/// let address = Address {
+///     street: "1313 Webfoot Walk".to_string(),
+///     city: "Duckburg, Calisota".to_string(),
+/// };
+///
+/// assert_eq!(
+///     serde_bencode::to_string(&address)?,
+///     "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".to_string(),
+/// );
+/// # Ok(())
+/// # }
+/// ```
+// TODO: List possible errors.
 pub fn to_string<T: ser::Serialize>(b: &T) -> Result<String> {
     let mut ser = Serializer::new();
     b.serialize(&mut ser)?;

@@ -3,6 +3,8 @@ use std::str;
 use serde::{de, forward_to_deserialize_any};
 use crate::error::{Error, Result};
 
+#[doc(hidden)]
+// TODO: This should be pub(crate).
 pub struct BencodeAccess<'a, R: 'a + Read> {
     de: &'a mut Deserializer<R>,
     len: Option<usize>,
@@ -130,6 +132,7 @@ enum ParseResult {
     End,
 }
 
+/// A structure for deserializing bencode into Rust values.
 #[derive(Debug)]
 pub struct Deserializer<R: Read> {
     reader: R,
@@ -137,6 +140,7 @@ pub struct Deserializer<R: Read> {
 }
 
 impl<'de, R: Read> Deserializer<R> {
+    /// Create a new deserializer.
     pub fn new(reader: R) -> Deserializer<R> {
         Deserializer {
             reader: reader,
@@ -270,12 +274,66 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     }
 }
 
+/// Deserialize an instance of type `T` from a string of bencode.
+/// 
+/// # Examples
+/// ```
+/// # fn main() -> Result<(), serde_bencode::Error> {
+/// use serde_derive::{Serialize, Deserialize};
+///
+/// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+/// struct Address {
+///     street: String,
+///     city: String,
+/// }
+///
+/// let encoded = "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".to_string();
+/// let decoded: Address = serde_bencode::from_str(&encoded)?;
+///
+/// assert_eq!(
+///     decoded,
+///     Address {
+///         street: "1313 Webfoot Walk".to_string(),
+///         city: "Duckburg, Calisota".to_string(),
+///     }
+/// );
+/// # Ok(())
+/// # }
+/// ```
+// TODO: List possible errors.
 pub fn from_str<'de, T>(s: &'de str) -> Result<T>
     where T: de::Deserialize<'de>
 {
     from_bytes(s.as_bytes())
 }
 
+/// Deserialize an instance of type `T` from a bencode byte vector.
+/// 
+/// # Examples
+/// ```
+/// # fn main() -> Result<(), serde_bencode::Error> {
+/// use serde_derive::{Serialize, Deserialize};
+///
+/// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+/// struct Address {
+///     street: String,
+///     city: String,
+/// }
+///
+/// let encoded = "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".as_bytes();
+/// let decoded: Address = serde_bencode::from_bytes(&encoded)?;
+///
+/// assert_eq!(
+///     decoded,
+///     Address {
+///         street: "1313 Webfoot Walk".to_string(),
+///         city: "Duckburg, Calisota".to_string(),
+///     }
+/// );
+/// # Ok(())
+/// # }
+/// ```
+// TODO: List possible errors.
 pub fn from_bytes<'de, T>(b: &'de [u8]) -> Result<T>
     where T: de::Deserialize<'de>
 {

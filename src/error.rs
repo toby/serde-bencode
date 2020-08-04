@@ -1,3 +1,5 @@
+/// Structures used to handle errors when serializing or deserializing goes wrong.
+
 use std::fmt;
 use std::fmt::Display;
 use std::error::Error as StdError;
@@ -7,19 +9,44 @@ use serde::ser::Error as SerError;
 use serde::de::Error as DeError;
 use serde::de::{Unexpected, Expected};
 
+/// Alias for `Result<T, serde_bencode::Error>`.
 pub type Result<T> = StdResult<T, Error>;
 
+/// Represents all possible errors which can occur when serializing or deserializing bencode.
 #[derive(Debug)]
 pub enum Error {
+    /// Raised when an IO error occurred.
     IoError(IoError),
+
+    /// Raised when the value being deserialized is of the incorrect type.
     InvalidType(String),
+
+    /// Raised when the value being deserialized is of the right type, but is wrong for some other
+    /// reason. For example, this error may occur when deserializing to a String but the input data
+    /// is not valid UTF-8.
     InvalidValue(String),
+    
+    /// Raised when deserializing a sequence or map, but the input data is the wrong length.
     InvalidLength(String),
+
+    /// Raised when deserializing an enum, but the variant has an unrecognized name.
     UnknownVariant(String),
+
+    /// Raised when deserializing a struct, but there was a field which does not match any of the
+    /// expected fields.
     UnknownField(String),
+
+    /// Raised when deserializing a struct, but there was a field which was expected but not
+    /// present.
     MissingField(String),
+
+    /// Raised when deserializing a struct, but there is more than one field with the same name.
     DuplicateField(String),
+
+    /// Catchall for any other kind of error.
     Custom(String),
+
+    /// Unexpected end of input stream.
     EndOfStream,
 }
 

@@ -15,9 +15,11 @@ fn unexpected<T>(unexp: de::Unexpected) -> Result<T> {
     Err(de::Error::invalid_type(unexp, &Expected))
 }
 
+#[doc(hidden)]
 /// StringSerializer for serializing *just* strings (bytes are also strings in bencode).
 /// The string is returned as Result<Vec<u8>>::Ok without any prefixing (without bencode string
 /// length prefix).
+// TODO: This should be pub(crate).
 pub struct StringSerializer;
 
 impl<'a> ser::Serializer for &'a mut StringSerializer {
