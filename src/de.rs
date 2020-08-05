@@ -300,7 +300,12 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
 /// # Ok(())
 /// # }
 /// ```
-// TODO: List possible errors.
+///
+/// # Errors
+///
+/// This conversion can fail if the input bencode is improperly formatted or if the structure of
+/// the input does not match the structure expected by `T`. It can also fail if `T`'s
+/// implementation of `Deserialize` decides to fail.
 pub fn from_str<'de, T>(s: &'de str) -> Result<T>
     where T: de::Deserialize<'de>
 {
@@ -333,7 +338,12 @@ pub fn from_str<'de, T>(s: &'de str) -> Result<T>
 /// # Ok(())
 /// # }
 /// ```
-// TODO: List possible errors.
+///
+/// # Errors
+///
+/// This conversion can fail if the input bencode is improperly formatted or if the structure of
+/// the input does not match the structure expected by `T`. It can also fail if `T`'s
+/// implementation of `Deserialize` decides to fail.
 pub fn from_bytes<'de, T>(b: &'de [u8]) -> Result<T>
     where T: de::Deserialize<'de>
 {
