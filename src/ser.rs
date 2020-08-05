@@ -349,7 +349,11 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 /// # Ok(())
 /// # }
 /// ```
-// TODO: List possible errors.
+///
+/// # Errors
+///
+/// Serialization can fail if `T`'s implementation of `Serialize` decides to fail or `T` contains
+/// floating point values, which bencode cannot serialize.
 pub fn to_bytes<T: ser::Serialize>(b: &T) -> Result<Vec<u8>> {
     let mut ser = Serializer::new();
     b.serialize(&mut ser)?;
@@ -381,7 +385,11 @@ pub fn to_bytes<T: ser::Serialize>(b: &T) -> Result<Vec<u8>> {
 /// # Ok(())
 /// # }
 /// ```
-// TODO: List possible errors.
+///
+/// # Errors
+///
+/// Serialization can fail if `T`'s implementation of `Serialize` decides to fail or `T` contains
+/// floating point values, which bencode cannot serialize.
 pub fn to_string<T: ser::Serialize>(b: &T) -> Result<String> {
     let mut ser = Serializer::new();
     b.serialize(&mut ser)?;
