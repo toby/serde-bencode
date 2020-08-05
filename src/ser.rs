@@ -17,7 +17,7 @@ impl Serializer {
         Serializer { buf: Vec::new() }
     }
 
-    /// Consume the serializer and return the contents as a vector.
+    /// Consume the serializer and return the contents as a byte vector.
     pub fn into_vec(self) -> Vec<u8> {
         self.buf
     }
