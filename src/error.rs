@@ -1,4 +1,4 @@
-/// Structures used to handle errors when serializing or deserializing goes wrong.
+//! Structures used to handle errors when serializing or deserializing goes wrong.
 
 use std::fmt;
 use std::fmt::Display;

@@ -1,3 +1,5 @@
+//! Serialize a Rust data structure into bencode data.
+
 mod string;
 
 use std::str;
