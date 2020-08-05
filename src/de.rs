@@ -1,3 +1,5 @@
+//! Deserialize bencode data to a Rust data structure
+
 use std::io::Read;
 use std::str;
 use serde::{de, forward_to_deserialize_any};

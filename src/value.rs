@@ -1,3 +1,5 @@
+//! Structures for representing bencoded values with Rust data types.
+
 use std::collections::HashMap;
 use std::fmt;
 use serde::de;

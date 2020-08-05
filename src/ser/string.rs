@@ -1,3 +1,5 @@
+//! Serializer for serializing *just* strings.
+
 use std::str;
 use std::fmt;
 use serde::ser;
