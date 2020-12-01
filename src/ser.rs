@@ -218,16 +218,19 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Ok(())
     }
     fn serialize_u8(self, value: u8) -> Result<()> {
-        self.serialize_i64(value as i64)
+        self.serialize_u64(value as u64)
     }
     fn serialize_u16(self, value: u16) -> Result<()> {
-        self.serialize_i64(value as i64)
+        self.serialize_u64(value as u64)
     }
     fn serialize_u32(self, value: u32) -> Result<()> {
-        self.serialize_i64(value as i64)
+        self.serialize_u64(value as u64)
     }
     fn serialize_u64(self, value: u64) -> Result<()> {
-        self.serialize_i64(value as i64)
+        self.push("i");
+        self.push(value.to_string());
+        self.push("e");
+        Ok(())
     }
     fn serialize_f32(self, _value: f32) -> Result<()> {
         Err(Error::InvalidValue("Cannot serialize f32".to_string()))
