@@ -14,7 +14,7 @@ pub struct BencodeAccess<'a, R: 'a + Read> {
 
 impl<'a, R: 'a + Read> BencodeAccess<'a, R> {
     fn new(de: &'a mut Deserializer<R>, len: Option<usize>) -> BencodeAccess<'a, R> {
-        BencodeAccess { de: de, len: len }
+        BencodeAccess { de, len }
     }
 }
 
@@ -27,20 +27,17 @@ impl<'de, 'a, R: 'a + Read> de::SeqAccess<'de> for BencodeAccess<'a, R> {
     ) -> Result<Option<T::Value>> {
         let res = match self.de.parse()? {
             ParseResult::End => Ok(None),
-            r @ _ => {
+            r => {
                 self.de.next = Some(r);
                 Ok(Some(seed.deserialize(&mut *self.de)?))
             }
         };
-        match self.len {
-            Some(l) => {
-                let l = l - 1;
-                self.len = Some(l);
-                if l == 0 && ParseResult::End != self.de.parse()? {
-                    return Err(Error::InvalidType("expected `e`".to_string()));
-                }
+        if let Some(l) = self.len {
+            let l = l - 1;
+            self.len = Some(l);
+            if l == 0 && ParseResult::End != self.de.parse()? {
+                return Err(Error::InvalidType("expected `e`".to_string()));
             }
-            None => (),
         }
         res
     }
@@ -54,7 +51,7 @@ impl<'de, 'a, R: 'a + Read> de::MapAccess<'de> for BencodeAccess<'a, R> {
     {
         match self.de.parse()? {
             ParseResult::End => Ok(None),
-            r @ _ => {
+            r => {
                 self.de.next = Some(r);
                 Ok(Some(seed.deserialize(&mut *self.de)?))
             }
@@ -118,7 +115,7 @@ impl<'de, 'a, R: 'a + Read> de::EnumAccess<'de> for BencodeAccess<'a, R> {
                 Ok((seed.deserialize(&mut *self.de)?, self))
             }
             ParseResult::Map => Ok((seed.deserialize(&mut *self.de)?, self)),
-            t @ _ => Err(Error::InvalidValue(format!(
+            t => Err(Error::InvalidValue(format!(
                 "Expected bytes or map; got `{:?}`",
                 t
             ))),
@@ -148,10 +145,7 @@ pub struct Deserializer<R: Read> {
 impl<'de, R: Read> Deserializer<R> {
     /// Create a new deserializer.
     pub fn new(reader: R) -> Deserializer<R> {
-        Deserializer {
-            reader: reader,
-            next: None,
-        }
+        Deserializer { reader, next: None }
     }
 
     fn parse_int(&mut self) -> Result<i64> {
@@ -226,7 +220,7 @@ impl<'de, R: Read> Deserializer<R> {
             b'l' => Ok(ParseResult::List),
             b'd' => Ok(ParseResult::Map),
             b'e' => Ok(ParseResult::End),
-            c @ _ => Err(Error::InvalidValue(format!(
+            c => Err(Error::InvalidValue(format!(
                 "Invalid character `{}`",
                 c as char
             ))),

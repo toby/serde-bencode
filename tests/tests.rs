@@ -1,7 +1,7 @@
 extern crate serde_bencode;
 
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_bencode::de::{from_bytes, from_str};
 use serde_bencode::error::Result;
 use serde_bencode::ser::{to_bytes, to_string, Serializer};
@@ -178,7 +178,7 @@ fn serialize_struct() {
     struct Fake {
         x: i64,
         y: String,
-    };
+    }
     let f = Fake {
         x: 1111,
         y: "dog".to_string(),
@@ -193,7 +193,7 @@ fn deserialize_to_struct() {
     struct Fake {
         y: String,
         x: i64,
-    };
+    }
     assert_eq!(
         from_str::<Fake>(b).unwrap(),
         Fake {
@@ -214,7 +214,7 @@ fn deserialize_to_struct_with_option() {
         z: Option<String>,
         #[serde(default)]
         a: Option<String>,
-    };
+    }
     let r: Fake = from_str(b).unwrap();
     assert_eq!(
         r,
@@ -246,7 +246,7 @@ fn deserialize_to_value_struct_mix() {
         x: i64,
         z: Value,
         q: Vec<i64>,
-    };
+    }
     let r: Fake = from_str(b).unwrap();
     assert_eq!(
         r,
@@ -267,7 +267,7 @@ fn serialize_lexical_sorted_keys() {
         bb: i32,
         z: i32,
         c: i32,
-    };
+    }
     let f = Fake {
         aaa: 1,
         bb: 2,
@@ -324,7 +324,7 @@ fn struct_none_vals() {
     struct Fake {
         a: Option<i32>,
         b: Option<i32>,
-    };
+    }
     let f = Fake {
         a: None,
         b: Some(1),
@@ -338,7 +338,7 @@ fn ser_de_variant_unit() {
     enum Mock {
         A,
         B,
-    };
+    }
     test_ser_de_eq(("pre".to_string(), Mock::A, "post".to_string()));
     test_ser_de_eq(("pre".to_string(), Mock::B, "post".to_string()));
 }
@@ -349,7 +349,7 @@ fn ser_de_variant_newtype() {
     enum Mock {
         A(i64),
         B(i64),
-    };
+    }
     test_ser_de_eq(("pre".to_string(), Mock::A(123), "post".to_string()));
     test_ser_de_eq(("pre".to_string(), Mock::B(321), "post".to_string()));
 }
@@ -360,7 +360,7 @@ fn ser_de_variant_tuple() {
     enum Mock {
         A(i64, i64),
         B(i64, i64),
-    };
+    }
     test_ser_de_eq(("pre".to_string(), Mock::A(123, 321), "post".to_string()));
     test_ser_de_eq(("pre".to_string(), Mock::B(321, 123), "post".to_string()));
 }
@@ -371,7 +371,7 @@ fn ser_de_variant_struct() {
     enum Mock {
         A { a: i64, b: i64 },
         B { c: i64, d: i64 },
-    };
+    }
     test_ser_de_eq((
         "pre".to_string(),
         Mock::A { a: 123, b: 321 },
