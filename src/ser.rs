@@ -2,10 +2,10 @@
 
 mod string;
 
-use std::str;
-use std::mem;
-use serde::ser;
 use crate::error::{Error, Result};
+use serde::ser;
+use std::mem;
+use std::str;
 
 /// A structure for serializing Rust values into bencode.
 #[derive(Debug)]
@@ -100,7 +100,9 @@ impl<'a> SerializeMap<'a> {
 
     fn end_map(&mut self) -> Result<()> {
         if self.cur_key.is_some() {
-            return Err(Error::InvalidValue("`serialize_key` called without calling  `serialize_value`".to_string()));
+            return Err(Error::InvalidValue(
+                "`serialize_key` called without calling  `serialize_value`".to_string(),
+            ));
         }
         let mut entries = mem::replace(&mut self.entries, Vec::new());
         entries.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
@@ -119,16 +121,18 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
     type Error = Error;
     fn serialize_key<T: ?Sized + ser::Serialize>(&mut self, key: &T) -> Result<()> {
         if self.cur_key.is_some() {
-            return Err(Error::InvalidValue("`serialize_key` called multiple times without calling  `serialize_value`".to_string()));
+            return Err(Error::InvalidValue(
+                "`serialize_key` called multiple times without calling  `serialize_value`"
+                    .to_string(),
+            ));
         }
         self.cur_key = Some(key.serialize(&mut string::StringSerializer)?);
         Ok(())
     }
     fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
-        let key = self.cur_key
-            .take()
-            .ok_or(Error::InvalidValue("`serialize_value` called without calling `serialize_key`"
-                                           .to_string()))?;
+        let key = self.cur_key.take().ok_or(Error::InvalidValue(
+            "`serialize_value` called without calling `serialize_key`".to_string(),
+        ))?;
         let mut ser = Serializer::new();
         value.serialize(&mut ser)?;
         let value = ser.into_vec();
@@ -138,11 +142,15 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
         Ok(())
     }
     fn serialize_entry<K, V>(&mut self, key: &K, value: &V) -> Result<()>
-        where K: ?Sized + ser::Serialize,
-              V: ?Sized + ser::Serialize
+    where
+        K: ?Sized + ser::Serialize,
+        V: ?Sized + ser::Serialize,
     {
         if self.cur_key.is_some() {
-            return Err(Error::InvalidValue("`serialize_key` called multiple times without calling  `serialize_value`".to_string()));
+            return Err(Error::InvalidValue(
+                "`serialize_key` called multiple times without calling  `serialize_value`"
+                    .to_string(),
+            ));
         }
         let key = key.serialize(&mut string::StringSerializer)?;
         let mut ser = Serializer::new();
@@ -161,10 +169,11 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
 impl<'a> ser::SerializeStruct for SerializeMap<'a> {
     type Ok = ();
     type Error = Error;
-    fn serialize_field<T: ?Sized + ser::Serialize>(&mut self,
-                                                   key: &'static str,
-                                                   value: &T)
-                                                   -> Result<()> {
+    fn serialize_field<T: ?Sized + ser::Serialize>(
+        &mut self,
+        key: &'static str,
+        value: &T,
+    ) -> Result<()> {
         ser::SerializeMap::serialize_entry(self, key, value)
     }
     fn end(mut self) -> Result<()> {
@@ -175,10 +184,11 @@ impl<'a> ser::SerializeStruct for SerializeMap<'a> {
 impl<'a> ser::SerializeStructVariant for SerializeMap<'a> {
     type Ok = ();
     type Error = Error;
-    fn serialize_field<T: ?Sized + ser::Serialize>(&mut self,
-                                                   key: &'static str,
-                                                   value: &T)
-                                                   -> Result<()> {
+    fn serialize_field<T: ?Sized + ser::Serialize>(
+        &mut self,
+        key: &'static str,
+        value: &T,
+    ) -> Result<()> {
         ser::SerializeMap::serialize_entry(self, key, value)
     }
     fn end(mut self) -> Result<()> {
@@ -258,25 +268,28 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
         self.serialize_unit()
     }
-    fn serialize_unit_variant(self,
-                              _name: &'static str,
-                              _variant_index: u32,
-                              variant: &'static str)
-                              -> Result<()> {
+    fn serialize_unit_variant(
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        variant: &'static str,
+    ) -> Result<()> {
         self.serialize_str(variant)
     }
-    fn serialize_newtype_struct<T: ?Sized + ser::Serialize>(self,
-                                                            _name: &'static str,
-                                                            value: &T)
-                                                            -> Result<()> {
+    fn serialize_newtype_struct<T: ?Sized + ser::Serialize>(
+        self,
+        _name: &'static str,
+        value: &T,
+    ) -> Result<()> {
         value.serialize(self)
     }
-    fn serialize_newtype_variant<T: ?Sized + ser::Serialize>(self,
-                                                             _name: &'static str,
-                                                             _variant_index: u32,
-                                                             variant: &'static str,
-                                                             value: &T)
-                                                             -> Result<()> {
+    fn serialize_newtype_variant<T: ?Sized + ser::Serialize>(
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        variant: &'static str,
+        value: &T,
+    ) -> Result<()> {
         self.push("d");
         self.serialize_bytes(variant.as_bytes())?;
         value.serialize(&mut *self)?;
@@ -299,12 +312,13 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_tuple_struct(self, _name: &'static str, len: usize) -> Result<Self> {
         self.serialize_seq(Some(len))
     }
-    fn serialize_tuple_variant(self,
-                               _name: &'static str,
-                               _variant_index: u32,
-                               variant: &'static str,
-                               _len: usize)
-                               -> Result<Self::SerializeTupleVariant> {
+    fn serialize_tuple_variant(
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        variant: &'static str,
+        _len: usize,
+    ) -> Result<Self::SerializeTupleVariant> {
         self.push("d");
         self.serialize_bytes(variant.as_bytes())?;
         self.push("l");
@@ -316,12 +330,13 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct> {
         self.serialize_map(Some(len))
     }
-    fn serialize_struct_variant(self,
-                                _name: &'static str,
-                                _variant_index: u32,
-                                variant: &'static str,
-                                len: usize)
-                                -> Result<Self::SerializeStructVariant> {
+    fn serialize_struct_variant(
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        variant: &'static str,
+        len: usize,
+    ) -> Result<Self::SerializeStructVariant> {
         self.push("d");
         self.serialize_bytes(variant.as_bytes())?;
         Ok(SerializeMap::new(self, len))
@@ -329,7 +344,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 }
 
 /// Serialize the given data into a bencode byte vector.
-/// 
+///
 /// # Examples
 /// ```
 /// # fn main() -> Result<(), serde_bencode::Error> {

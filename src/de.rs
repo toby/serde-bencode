@@ -1,9 +1,9 @@
 //! Deserialize bencode data to a Rust data structure
 
+use crate::error::{Error, Result};
+use serde::{de, forward_to_deserialize_any};
 use std::io::Read;
 use std::str;
-use serde::{de, forward_to_deserialize_any};
-use crate::error::{Error, Result};
 
 #[doc(hidden)]
 // TODO: This should be pub(crate).
@@ -21,9 +21,10 @@ impl<'a, R: 'a + Read> BencodeAccess<'a, R> {
 impl<'de, 'a, R: 'a + Read> de::SeqAccess<'de> for BencodeAccess<'a, R> {
     type Error = Error;
 
-    fn next_element_seed<T: de::DeserializeSeed<'de>>(&mut self,
-                                                      seed: T)
-                                                      -> Result<Option<T::Value>> {
+    fn next_element_seed<T: de::DeserializeSeed<'de>>(
+        &mut self,
+        seed: T,
+    ) -> Result<Option<T::Value>> {
         let res = match self.de.parse()? {
             ParseResult::End => Ok(None),
             r @ _ => {
@@ -48,7 +49,8 @@ impl<'de, 'a, R: 'a + Read> de::SeqAccess<'de> for BencodeAccess<'a, R> {
 impl<'de, 'a, R: 'a + Read> de::MapAccess<'de> for BencodeAccess<'a, R> {
     type Error = Error;
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
-        where K: de::DeserializeSeed<'de>
+    where
+        K: de::DeserializeSeed<'de>,
     {
         match self.de.parse()? {
             ParseResult::End => Ok(None),
@@ -60,7 +62,8 @@ impl<'de, 'a, R: 'a + Read> de::MapAccess<'de> for BencodeAccess<'a, R> {
     }
 
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value>
-        where V: de::DeserializeSeed<'de>
+    where
+        V: de::DeserializeSeed<'de>,
     {
         seed.deserialize(&mut *self.de)
     }
@@ -83,10 +86,7 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
 
     fn tuple_variant<V: de::Visitor<'de>>(self, len: usize, visitor: V) -> Result<V::Value> {
         let res = match self.de.parse()? {
-            ParseResult::List => {
-                visitor
-                    .visit_seq(BencodeAccess::new(&mut *self.de, Some(len)))?
-            }
+            ParseResult::List => visitor.visit_seq(BencodeAccess::new(&mut *self.de, Some(len)))?,
             _ => return Err(Error::InvalidType("expected list".to_string())),
         };
         if ParseResult::End != self.de.parse()? {
@@ -95,10 +95,11 @@ impl<'de, 'a, R: 'a + Read> de::VariantAccess<'de> for BencodeAccess<'a, R> {
         Ok(res)
     }
 
-    fn struct_variant<V: de::Visitor<'de>>(self,
-                                           _: &'static [&'static str],
-                                           visitor: V)
-                                           -> Result<V::Value> {
+    fn struct_variant<V: de::Visitor<'de>>(
+        self,
+        _: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value> {
         let res = de::Deserializer::deserialize_any(&mut *self.de, visitor)?;
         if ParseResult::End != self.de.parse()? {
             return Err(Error::InvalidType("expected `e`".to_string()));
@@ -117,7 +118,10 @@ impl<'de, 'a, R: 'a + Read> de::EnumAccess<'de> for BencodeAccess<'a, R> {
                 Ok((seed.deserialize(&mut *self.de)?, self))
             }
             ParseResult::Map => Ok((seed.deserialize(&mut *self.de)?, self)),
-            t @ _ => Err(Error::InvalidValue(format!("Expected bytes or map; got `{:?}`", t))),
+            t @ _ => Err(Error::InvalidValue(format!(
+                "Expected bytes or map; got `{:?}`",
+                t
+            ))),
         }
     }
 }
@@ -159,18 +163,12 @@ impl<'de, R: Read> Deserializer<R> {
             }
             match buf[0] {
                 b'e' => {
-                    let len_str =
-                        String::from_utf8(result)
-                            .map_err(|_| {
-                                         Error::InvalidValue("Non UTF-8 integer encoding"
-                                                                 .to_string())
-                                     })?;
-                    let len_int = len_str
-                        .parse()
-                        .map_err(|_| {
-                                     Error::InvalidValue(format!("Can't parse `{}` as integer",
-                                                                 len_str))
-                                 })?;
+                    let len_str = String::from_utf8(result).map_err(|_| {
+                        Error::InvalidValue("Non UTF-8 integer encoding".to_string())
+                    })?;
+                    let len_int = len_str.parse().map_err(|_| {
+                        Error::InvalidValue(format!("Can't parse `{}` as integer", len_str))
+                    })?;
                     return Ok(len_int);
                 }
                 n => result.push(n),
@@ -188,14 +186,12 @@ impl<'de, R: Read> Deserializer<R> {
             }
             match buf[0] {
                 b':' => {
-                    let len_str =
-                        String::from_utf8(len)
-                            .map_err(|_| {
-                                         Error::InvalidValue("Non UTF-8 integer encoding"
-                                                                 .to_string())
-                                     })?;
-                    let len_int = len_str.parse()
-                        .map_err(|_| Error::InvalidValue(format!("Can't parse `{}` as string length", len_str)))?;
+                    let len_str = String::from_utf8(len).map_err(|_| {
+                        Error::InvalidValue("Non UTF-8 integer encoding".to_string())
+                    })?;
+                    let len_int = len_str.parse().map_err(|_| {
+                        Error::InvalidValue(format!("Can't parse `{}` as string length", len_str))
+                    })?;
                     return Ok(len_int);
                 }
                 n => len.push(n),
@@ -206,7 +202,8 @@ impl<'de, R: Read> Deserializer<R> {
     fn parse_bytes(&mut self, len_char: u8) -> Result<Vec<u8>> {
         let len = self.parse_bytes_len(len_char)?;
         let mut buf = vec![0u8; len];
-        let actual_len = self.reader
+        let actual_len = self
+            .reader
             .read(buf.as_mut_slice())
             .map_err(Error::IoError)?;
         if len != actual_len {
@@ -229,7 +226,10 @@ impl<'de, R: Read> Deserializer<R> {
             b'l' => Ok(ParseResult::List),
             b'd' => Ok(ParseResult::Map),
             b'e' => Ok(ParseResult::End),
-            c @ _ => Err(Error::InvalidValue(format!("Invalid character `{}`", c as char))),
+            c @ _ => Err(Error::InvalidValue(format!(
+                "Invalid character `{}`",
+                c as char
+            ))),
         }
     }
 }
@@ -255,7 +255,11 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     }
 
     #[inline]
-    fn deserialize_newtype_struct<V: de::Visitor<'de>>(self, _name: &'static str, visitor: V) -> Result<V::Value> {
+    fn deserialize_newtype_struct<V: de::Visitor<'de>>(
+        self,
+        _name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value> {
         visitor.visit_newtype_struct(self)
     }
 
@@ -265,19 +269,21 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     }
 
     #[inline]
-    fn deserialize_enum<V>(self,
-                           _name: &str,
-                           _variants: &'static [&'static str],
-                           visitor: V)
-                           -> Result<V::Value>
-        where V: de::Visitor<'de>
+    fn deserialize_enum<V>(
+        self,
+        _name: &str,
+        _variants: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value>
+    where
+        V: de::Visitor<'de>,
     {
         visitor.visit_enum(BencodeAccess::new(self, None))
     }
 }
 
 /// Deserialize an instance of type `T` from a string of bencode.
-/// 
+///
 /// # Examples
 /// ```
 /// # fn main() -> Result<(), serde_bencode::Error> {
@@ -309,13 +315,14 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
 /// the input does not match the structure expected by `T`. It can also fail if `T`'s
 /// implementation of `Deserialize` decides to fail.
 pub fn from_str<'de, T>(s: &'de str) -> Result<T>
-    where T: de::Deserialize<'de>
+where
+    T: de::Deserialize<'de>,
 {
     from_bytes(s.as_bytes())
 }
 
 /// Deserialize an instance of type `T` from a bencode byte vector.
-/// 
+///
 /// # Examples
 /// ```
 /// # fn main() -> Result<(), serde_bencode::Error> {
@@ -347,7 +354,8 @@ pub fn from_str<'de, T>(s: &'de str) -> Result<T>
 /// the input does not match the structure expected by `T`. It can also fail if `T`'s
 /// implementation of `Deserialize` decides to fail.
 pub fn from_bytes<'de, T>(b: &'de [u8]) -> Result<T>
-    where T: de::Deserialize<'de>
+where
+    T: de::Deserialize<'de>,
 {
     de::Deserialize::deserialize(&mut Deserializer::new(b))
 }
