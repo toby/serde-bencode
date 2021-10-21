@@ -1,12 +1,12 @@
-extern crate serde_bencode;
 extern crate serde;
+extern crate serde_bencode;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_bytes;
 
 use serde_bencode::de;
-use std::io::{self, Read};
 use serde_bytes::ByteBuf;
+use std::io::{self, Read};
 
 #[derive(Debug, Deserialize)]
 struct Node(String, i64);
@@ -23,7 +23,7 @@ struct File {
 struct Info {
     name: String,
     pieces: ByteBuf,
-    #[serde(rename="piece length")]
+    #[serde(rename = "piece length")]
     piece_length: i64,
     #[serde(default)]
     md5sum: Option<String>,
@@ -36,7 +36,7 @@ struct Info {
     #[serde(default)]
     path: Option<Vec<String>>,
     #[serde(default)]
-    #[serde(rename="root hash")]
+    #[serde(rename = "root hash")]
     root_hash: Option<String>,
 }
 
@@ -52,15 +52,15 @@ struct Torrent {
     #[serde(default)]
     httpseeds: Option<Vec<String>>,
     #[serde(default)]
-    #[serde(rename="announce-list")]
+    #[serde(rename = "announce-list")]
     announce_list: Option<Vec<Vec<String>>>,
     #[serde(default)]
-    #[serde(rename="creation date")]
+    #[serde(rename = "creation date")]
     creation_date: Option<i64>,
-    #[serde(rename="comment")]
+    #[serde(rename = "comment")]
     comment: Option<String>,
     #[serde(default)]
-    #[serde(rename="created by")]
+    #[serde(rename = "created by")]
     created_by: Option<String>,
 }
 
@@ -68,7 +68,7 @@ fn render_torrent(torrent: &Torrent) {
     println!("name:\t\t{}", torrent.info.name);
     println!("announce:\t{:?}", torrent.announce);
     println!("nodes:\t\t{:?}", torrent.nodes);
-    if let &Some(ref al) = &torrent.announce_list {
+    if let Some(al) = &torrent.announce_list {
         for a in al {
             println!("announce list:\t{}", a[0]);
         }
@@ -83,7 +83,7 @@ fn render_torrent(torrent: &Torrent) {
     println!("root hash:\t{:?}", torrent.info.root_hash);
     println!("md5sum:\t\t{:?}", torrent.info.md5sum);
     println!("path:\t\t{:?}", torrent.info.path);
-    if let &Some(ref files) = &torrent.info.files {
+    if let Some(files) = &torrent.info.files {
         for f in files {
             println!("file path:\t{:?}", f.path);
             println!("file length:\t{}", f.length);
@@ -97,13 +97,10 @@ fn main() {
     let mut buffer = Vec::new();
     let mut handle = stdin.lock();
     match handle.read_to_end(&mut buffer) {
-        Ok(_) => {
-            match de::from_bytes::<Torrent>(&buffer) {
-                Ok(t) => render_torrent(&t),
-                Err(e) => println!("ERROR: {:?}", e),
-            }
-        }
+        Ok(_) => match de::from_bytes::<Torrent>(&buffer) {
+            Ok(t) => render_torrent(&t),
+            Err(e) => println!("ERROR: {:?}", e),
+        },
         Err(e) => println!("ERROR: {:?}", e),
-
     }
 }

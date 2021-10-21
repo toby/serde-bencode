@@ -8,7 +8,7 @@ use std::mem;
 use std::str;
 
 /// A structure for serializing Rust values into bencode.
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct Serializer {
     buf: Vec<u8>,
 }
@@ -16,7 +16,7 @@ pub struct Serializer {
 impl Serializer {
     /// Create a new serializer.
     pub fn new() -> Serializer {
-        Serializer { buf: Vec::new() }
+        Self::default()
     }
 
     /// Consume the serializer and return the contents as a byte vector.
@@ -92,7 +92,7 @@ pub struct SerializeMap<'a> {
 impl<'a> SerializeMap<'a> {
     pub fn new(ser: &'a mut Serializer, len: usize) -> SerializeMap {
         SerializeMap {
-            ser: ser,
+            ser,
             entries: Vec::with_capacity(len),
             cur_key: None,
         }
@@ -104,7 +104,7 @@ impl<'a> SerializeMap<'a> {
                 "`serialize_key` called without calling  `serialize_value`".to_string(),
             ));
         }
-        let mut entries = mem::replace(&mut self.entries, Vec::new());
+        let mut entries = mem::take(&mut self.entries);
         entries.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
         self.ser.push("d");
         for (k, v) in entries {
@@ -130,9 +130,11 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
         Ok(())
     }
     fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
-        let key = self.cur_key.take().ok_or(Error::InvalidValue(
-            "`serialize_value` called without calling `serialize_key`".to_string(),
-        ))?;
+        let key = self.cur_key.take().ok_or_else(|| {
+            Error::InvalidValue(
+                "`serialize_value` called without calling `serialize_key`".to_string(),
+            )
+        })?;
         let mut ser = Serializer::new();
         value.serialize(&mut ser)?;
         let value = ser.into_vec();
