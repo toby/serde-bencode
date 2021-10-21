@@ -1,13 +1,13 @@
 //! Structures used to handle errors when serializing or deserializing goes wrong.
 
+use serde::de::Error as DeError;
+use serde::de::{Expected, Unexpected};
+use serde::ser::Error as SerError;
+use std::error::Error as StdError;
 use std::fmt;
 use std::fmt::Display;
-use std::error::Error as StdError;
 use std::io::Error as IoError;
 use std::result::Result as StdResult;
-use serde::ser::Error as SerError;
-use serde::de::Error as DeError;
-use serde::de::{Unexpected, Expected};
 
 /// Alias for `Result<T, serde_bencode::Error>`.
 pub type Result<T> = StdResult<T, Error>;
@@ -25,7 +25,7 @@ pub enum Error {
     /// reason. For example, this error may occur when deserializing to a String but the input data
     /// is not valid UTF-8.
     InvalidValue(String),
-    
+
     /// Raised when deserializing a sequence or map, but the input data is the wrong length.
     InvalidLength(String),
 
@@ -74,15 +74,17 @@ impl DeError for Error {
     }
 
     fn unknown_variant(field: &str, expected: &'static [&'static str]) -> Self {
-        Error::UnknownVariant(format!("Unknown Variant: `{}` (expected one of: {:?})",
-                                      field,
-                                      expected))
+        Error::UnknownVariant(format!(
+            "Unknown Variant: `{}` (expected one of: {:?})",
+            field, expected
+        ))
     }
 
     fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
-        Error::UnknownField(format!("Unknown Field: `{}` (expected one of: {:?})",
-                                    field,
-                                    expected))
+        Error::UnknownField(format!(
+            "Unknown Field: `{}` (expected one of: {:?})",
+            field, expected
+        ))
     }
 
     fn missing_field(field: &'static str) -> Self {
@@ -106,7 +108,7 @@ impl StdError for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let message = match *self {
-            Error::IoError(ref error) => {return error.fmt(f)},
+            Error::IoError(ref error) => return error.fmt(f),
             Error::InvalidType(ref s) => s,
             Error::InvalidValue(ref s) => s,
             Error::InvalidLength(ref s) => s,

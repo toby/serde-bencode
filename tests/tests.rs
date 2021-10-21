@@ -1,12 +1,12 @@
 extern crate serde_bencode;
 
-use serde_bencode::value::Value;
-use serde_bencode::de::{from_bytes, from_str};
-use serde_bencode::ser::{Serializer, to_bytes, to_string};
-use serde_bencode::error::Result;
 use serde::de::DeserializeOwned;
-use serde::{Serialize, Deserialize};
-use serde_derive::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use serde_bencode::de::{from_bytes, from_str};
+use serde_bencode::error::Result;
+use serde_bencode::ser::{to_bytes, to_string, Serializer};
+use serde_bencode::value::Value;
+use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
 
@@ -26,7 +26,8 @@ fn test_value_de_ser(s: &str) {
 }
 
 fn test_ser_de_eq<T>(a: T)
-    where T: Serialize + DeserializeOwned + Debug + Eq
+where
+    T: Serialize + DeserializeOwned + Debug + Eq,
 {
     let mut ser = Serializer::new();
     a.serialize(&mut ser).unwrap();
@@ -47,18 +48,25 @@ fn ser_de_string() {
 
 #[test]
 fn ser_de_value_list_mixed() {
-    test_value_ser_de(Value::List(vec!["one".into(), "two".into(), "three".into(), 4i64.into()]));
+    test_value_ser_de(Value::List(vec![
+        "one".into(),
+        "two".into(),
+        "three".into(),
+        4i64.into(),
+    ]));
 }
 
 #[test]
 fn ser_de_value_list_nested() {
     let l_grandchild = Value::List(vec!["two".into()]);
     let l_child = Value::List(vec!["one".into(), l_grandchild]);
-    test_value_ser_de(vec!["one".into(),
-                           "two".into(),
-                           "three".into(),
-                           4i64.into(),
-                           l_child]);
+    test_value_ser_de(vec![
+        "one".into(),
+        "two".into(),
+        "three".into(),
+        4i64.into(),
+        l_child,
+    ]);
 }
 
 #[test]
@@ -72,7 +80,12 @@ fn ser_de_value_map() {
 fn ser_de_map_value_mixed() {
     let mut ma = HashMap::new();
     ma.insert("M jr.".into(), "nuggets".into());
-    let s = Value::List(vec!["one".into(), "two".into(), "three".into(), 4i64.into()]);
+    let s = Value::List(vec![
+        "one".into(),
+        "two".into(),
+        "three".into(),
+        4i64.into(),
+    ]);
     let mut m = HashMap::new();
     m.insert("Mc".into(), "Burger".into());
     m.insert("joint".into(), ma.into());
@@ -181,11 +194,13 @@ fn deserialize_to_struct() {
         y: String,
         x: i64,
     };
-    assert_eq!(from_str::<Fake>(b).unwrap(),
-               Fake {
-                   x: 1111,
-                   y: "dog".to_string(),
-               });
+    assert_eq!(
+        from_str::<Fake>(b).unwrap(),
+        Fake {
+            x: 1111,
+            y: "dog".to_string(),
+        }
+    );
 }
 
 #[test]
@@ -201,13 +216,15 @@ fn deserialize_to_struct_with_option() {
         a: Option<String>,
     };
     let r: Fake = from_str(b).unwrap();
-    assert_eq!(r,
-               Fake {
-                   x: 1111,
-                   y: "dog".to_string(),
-                   z: Some("yo".to_string()),
-                   a: None,
-               });
+    assert_eq!(
+        r,
+        Fake {
+            x: 1111,
+            y: "dog".to_string(),
+            z: Some("yo".to_string()),
+            a: None,
+        }
+    );
 }
 
 #[test]
@@ -231,13 +248,15 @@ fn deserialize_to_value_struct_mix() {
         q: Vec<i64>,
     };
     let r: Fake = from_str(b).unwrap();
-    assert_eq!(r,
-               Fake {
-                   x: 1111,
-                   y: "dog".to_string(),
-                   z: Value::Int(66),
-                   q: vec![666],
-               });
+    assert_eq!(
+        r,
+        Fake {
+            x: 1111,
+            y: "dog".to_string(),
+            z: Value::Int(66),
+            q: vec![666],
+        }
+    );
 }
 
 #[test]
@@ -260,7 +279,7 @@ fn serialize_lexical_sorted_keys() {
 
 #[test]
 fn serialize_newtype_struct() {
-    #[derive(Serialize,Deserialize,Debug,Eq,PartialEq)]
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
     struct Fake(i32);
     let f = Fake(66);
     assert_eq!(to_string(&f).unwrap(), "i66e");
@@ -353,8 +372,16 @@ fn ser_de_variant_struct() {
         A { a: i64, b: i64 },
         B { c: i64, d: i64 },
     };
-    test_ser_de_eq(("pre".to_string(), Mock::A { a: 123, b: 321 }, "post".to_string()));
-    test_ser_de_eq(("pre".to_string(), Mock::B { c: 321, d: 123 }, "post".to_string()));
+    test_ser_de_eq((
+        "pre".to_string(),
+        Mock::A { a: 123, b: 321 },
+        "post".to_string(),
+    ));
+    test_ser_de_eq((
+        "pre".to_string(),
+        Mock::B { c: 321, d: 123 },
+        "post".to_string(),
+    ));
 }
 
 #[test]

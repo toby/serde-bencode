@@ -1,10 +1,10 @@
 //! Structures for representing bencoded values with Rust data types.
 
+use serde::de;
+use serde::ser::{self, SerializeMap, SerializeSeq};
+use serde_bytes::{ByteBuf, Bytes};
 use std::collections::HashMap;
 use std::fmt;
-use serde::de;
-use serde::ser::{self, SerializeSeq, SerializeMap};
-use serde_bytes::{Bytes, ByteBuf};
 
 /// All possible values which may be serialized in bencode.
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -25,7 +25,8 @@ pub enum Value {
 impl ser::Serialize for Value {
     #[inline]
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer
+    where
+        S: ser::Serializer,
     {
         match *self {
             Value::Bytes(ref v) => s.serialize_bytes(v),
@@ -48,7 +49,6 @@ impl ser::Serialize for Value {
     }
 }
 
-
 struct ValueVisitor;
 
 impl<'de> de::Visitor<'de> for ValueVisitor {
@@ -70,7 +70,8 @@ impl<'de> de::Visitor<'de> for ValueVisitor {
 
     #[inline]
     fn visit_str<E>(self, value: &str) -> Result<Value, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         Ok(Value::Bytes(value.into()))
     }
@@ -87,7 +88,8 @@ impl<'de> de::Visitor<'de> for ValueVisitor {
 
     #[inline]
     fn visit_seq<V>(self, mut access: V) -> Result<Value, V::Error>
-        where V: de::SeqAccess<'de>
+    where
+        V: de::SeqAccess<'de>,
     {
         let mut seq = Vec::new();
         while let Some(e) = access.next_element()? {
@@ -98,7 +100,8 @@ impl<'de> de::Visitor<'de> for ValueVisitor {
 
     #[inline]
     fn visit_map<V>(self, mut access: V) -> Result<Value, V::Error>
-        where V: de::MapAccess<'de>
+    where
+        V: de::MapAccess<'de>,
     {
         let mut map = HashMap::new();
         while let Some((k, v)) = access.next_entry::<ByteBuf, _>()? {
@@ -111,7 +114,8 @@ impl<'de> de::Visitor<'de> for ValueVisitor {
 impl<'de> de::Deserialize<'de> for Value {
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Value, D::Error>
-        where D: de::Deserializer<'de>
+    where
+        D: de::Deserializer<'de>,
     {
         deserializer.deserialize_any(ValueVisitor)
     }

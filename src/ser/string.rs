@@ -1,10 +1,10 @@
 //! Serializer for serializing *just* strings.
 
-use std::str;
-use std::fmt;
-use serde::ser;
-use serde::de;
 use crate::error::{Error, Result};
+use serde::de;
+use serde::ser;
+use std::fmt;
+use std::str;
 
 struct Expected;
 impl de::Expected for Expected {
@@ -83,25 +83,28 @@ impl<'a> ser::Serializer for &'a mut StringSerializer {
     fn serialize_unit_struct(self, _name: &'static str) -> Result<Vec<u8>> {
         self.serialize_unit()
     }
-    fn serialize_unit_variant(self,
-                              _name: &'static str,
-                              _variant_index: u32,
-                              _variant: &'static str)
-                              -> Result<Vec<u8>> {
+    fn serialize_unit_variant(
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        _variant: &'static str,
+    ) -> Result<Vec<u8>> {
         unexpected(de::Unexpected::UnitVariant)
     }
-    fn serialize_newtype_struct<T: ?Sized + ser::Serialize>(self,
-                                                            _name: &'static str,
-                                                            _value: &T)
-                                                            -> Result<Vec<u8>> {
+    fn serialize_newtype_struct<T: ?Sized + ser::Serialize>(
+        self,
+        _name: &'static str,
+        _value: &T,
+    ) -> Result<Vec<u8>> {
         unexpected(de::Unexpected::NewtypeStruct)
     }
-    fn serialize_newtype_variant<T: ?Sized + ser::Serialize>(self,
-                                                             _name: &'static str,
-                                                             _variant_index: u32,
-                                                             _variant: &'static str,
-                                                             _value: &T)
-                                                             -> Result<Vec<u8>> {
+    fn serialize_newtype_variant<T: ?Sized + ser::Serialize>(
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        _variant: &'static str,
+        _value: &T,
+    ) -> Result<Vec<u8>> {
         unexpected(de::Unexpected::NewtypeVariant)
     }
     fn serialize_none(self) -> Result<Vec<u8>> {
@@ -116,35 +119,39 @@ impl<'a> ser::Serializer for &'a mut StringSerializer {
     fn serialize_tuple(self, _size: usize) -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::Seq)
     }
-    fn serialize_tuple_struct(self,
-                              _name: &'static str,
-                              _len: usize)
-                              -> Result<ser::Impossible<Vec<u8>, Error>> {
+    fn serialize_tuple_struct(
+        self,
+        _name: &'static str,
+        _len: usize,
+    ) -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::NewtypeStruct)
     }
-    fn serialize_tuple_variant(self,
-                               _name: &'static str,
-                               _variant_index: u32,
-                               _variant: &'static str,
-                               _len: usize)
-                               -> Result<ser::Impossible<Vec<u8>, Error>> {
+    fn serialize_tuple_variant(
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        _variant: &'static str,
+        _len: usize,
+    ) -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::TupleVariant)
     }
     fn serialize_map(self, _len: Option<usize>) -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::Map)
     }
-    fn serialize_struct(self,
-                        _name: &'static str,
-                        _len: usize)
-                        -> Result<ser::Impossible<Vec<u8>, Error>> {
+    fn serialize_struct(
+        self,
+        _name: &'static str,
+        _len: usize,
+    ) -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::NewtypeStruct)
     }
-    fn serialize_struct_variant(self,
-                                _name: &'static str,
-                                _variant_index: u32,
-                                _variant: &'static str,
-                                _len: usize)
-                                -> Result<ser::Impossible<Vec<u8>, Error>> {
+    fn serialize_struct_variant(
+        self,
+        _name: &'static str,
+        _variant_index: u32,
+        _variant: &'static str,
+        _len: usize,
+    ) -> Result<ser::Impossible<Vec<u8>, Error>> {
         unexpected(de::Unexpected::StructVariant)
     }
 }
