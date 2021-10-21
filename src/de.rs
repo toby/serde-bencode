@@ -1,7 +1,10 @@
 //! Deserialize bencode data to a Rust data structure
 
 use crate::error::{Error, Result};
-use serde::{de, forward_to_deserialize_any};
+use serde::{
+    de::{self, Error as _, Unexpected},
+    forward_to_deserialize_any,
+};
 use std::io::Read;
 use std::str;
 
@@ -226,6 +229,16 @@ impl<'de, R: Read> Deserializer<R> {
             ))),
         }
     }
+
+    fn parse_only_bytes(&mut self) -> Result<Vec<u8>> {
+        match self.parse()? {
+            ParseResult::Bytes(bytes) => Ok(bytes),
+            ParseResult::Int(i) => Err(Error::invalid_type(Unexpected::Signed(i), &"Bytes")),
+            ParseResult::List => Err(Error::invalid_type(Unexpected::Seq, &"Bytes")),
+            ParseResult::Map => Err(Error::invalid_type(Unexpected::Map, &"Bytes")),
+            ParseResult::End => Err(Error::EndOfStream),
+        }
+    }
 }
 
 impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
@@ -243,8 +256,8 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     }
 
     forward_to_deserialize_any! {
-        i64 string seq bool i8 i16 i32 u8 u16 u32
-        u64 f32 f64 char str unit bytes byte_buf map unit_struct tuple_struct tuple
+        i64 seq bool i8 i16 i32 u8 u16 u32
+        u64 f32 f64 char unit bytes byte_buf map unit_struct tuple_struct tuple
         ignored_any identifier struct
     }
 
@@ -273,6 +286,30 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
         V: de::Visitor<'de>,
     {
         visitor.visit_enum(BencodeAccess::new(self, None))
+    }
+
+    // Do not delegate this to `deserialize_any` because we want to call `visit_str` instead of
+    // `visit_bytes` on the visitor, to correctly support adjacently tagged enums (the tag is
+    // parsed as str, not bytes).
+    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value>
+    where
+        V: de::Visitor<'de>,
+    {
+        let bytes = self.parse_only_bytes()?;
+        let s = str::from_utf8(&bytes)
+            .map_err(|_| Error::invalid_value(Unexpected::Bytes(&bytes), &"utf-8 string"))?;
+        visitor.visit_str(s)
+    }
+
+    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
+    where
+        V: de::Visitor<'de>,
+    {
+        let bytes = self.parse_only_bytes()?;
+        let s = String::from_utf8(bytes).map_err(|error| {
+            Error::invalid_value(Unexpected::Bytes(error.as_bytes()), &"utf-8 string")
+        })?;
+        visitor.visit_string(s)
     }
 }
 

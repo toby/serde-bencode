@@ -388,3 +388,16 @@ fn ser_de_variant_struct() {
 fn test_to_bytes() {
     assert_eq!(to_bytes(&"test").unwrap(), b"4:test");
 }
+
+#[test]
+fn ser_de_adjacently_tagged_enum() {
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+    #[serde(tag = "t", content = "c")]
+    enum Mock {
+        A,
+        B,
+    }
+
+    test_ser_de_eq(Mock::A);
+    test_ser_de_eq(Mock::B);
+}
