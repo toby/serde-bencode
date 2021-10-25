@@ -401,3 +401,25 @@ fn ser_de_adjacently_tagged_enum() {
     test_ser_de_eq(Mock::A);
     test_ser_de_eq(Mock::B);
 }
+
+#[test]
+fn ser_de_flattened_adjacently_tagged_enum() {
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+    struct Message {
+        id: u64,
+        #[serde(flatten)]
+        body: Body,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+    #[serde(tag = "type", content = "content")]
+    enum Body {
+        Request { token: u64 },
+        Response,
+    }
+
+    test_ser_de_eq(Message {
+        id: 123,
+        body: Body::Request { token: 456 },
+    });
+}
