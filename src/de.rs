@@ -229,16 +229,6 @@ impl<'de, R: Read> Deserializer<R> {
             ))),
         }
     }
-
-    fn parse_only_bytes(&mut self) -> Result<Vec<u8>> {
-        match self.parse()? {
-            ParseResult::Bytes(bytes) => Ok(bytes),
-            ParseResult::Int(i) => Err(Error::invalid_type(Unexpected::Signed(i), &"Bytes")),
-            ParseResult::List => Err(Error::invalid_type(Unexpected::Seq, &"Bytes")),
-            ParseResult::Map => Err(Error::invalid_type(Unexpected::Map, &"Bytes")),
-            ParseResult::End => Err(Error::EndOfStream),
-        }
-    }
 }
 
 impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
@@ -258,7 +248,7 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     forward_to_deserialize_any! {
         i64 seq bool i8 i16 i32 u8 u16 u32
         u64 f32 f64 char unit bytes byte_buf map unit_struct tuple_struct tuple
-        ignored_any identifier struct
+        ignored_any struct
     }
 
     #[inline]
@@ -295,7 +285,14 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     where
         V: de::Visitor<'de>,
     {
-        let bytes = self.parse_only_bytes()?;
+        let bytes = self.parse().and_then(|r| match r {
+            ParseResult::Bytes(bytes) => Ok(bytes),
+            ParseResult::Int(i) => Err(Error::invalid_type(Unexpected::Signed(i), &"Bytes")),
+            ParseResult::List => Err(Error::invalid_type(Unexpected::Seq, &"Bytes")),
+            ParseResult::Map => Err(Error::invalid_type(Unexpected::Map, &"Bytes")),
+            ParseResult::End => Err(Error::EndOfStream),
+        })?;
+
         let s = str::from_utf8(&bytes)
             .map_err(|_| Error::invalid_value(Unexpected::Bytes(&bytes), &"utf-8 string"))?;
         visitor.visit_str(s)
@@ -305,11 +302,14 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     where
         V: de::Visitor<'de>,
     {
-        let bytes = self.parse_only_bytes()?;
-        let s = String::from_utf8(bytes).map_err(|error| {
-            Error::invalid_value(Unexpected::Bytes(error.as_bytes()), &"utf-8 string")
-        })?;
-        visitor.visit_string(s)
+        self.deserialize_str(visitor)
+    }
+
+    fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value>
+    where
+        V: de::Visitor<'de>,
+    {
+        self.deserialize_str(visitor)
     }
 }
 
