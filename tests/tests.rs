@@ -423,3 +423,9 @@ fn ser_de_flattened_adjacently_tagged_enum() {
         body: Body::Request { token: 456 },
     });
 }
+
+// https://github.com/toby/serde-bencode/issues/16 (simplified)
+#[test]
+fn ser_de_vec_of_tuples() {
+    test_ser_de_eq(vec![(1, 2), (3, 4)]);
+}
