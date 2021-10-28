@@ -138,6 +138,18 @@ enum ParseResult {
     End,
 }
 
+impl ParseResult {
+    fn to_unexpected_error(&self, expected: &str) -> Error {
+        match self {
+            Self::Int(i) => Error::invalid_type(Unexpected::Signed(*i), &expected),
+            Self::Bytes(bytes) => Error::invalid_type(Unexpected::Bytes(bytes), &expected),
+            Self::List => Error::invalid_type(Unexpected::Seq, &expected),
+            Self::Map => Error::invalid_type(Unexpected::Map, &expected),
+            Self::End => Error::custom(format_args!("unexpected end, expected {}", expected)),
+        }
+    }
+}
+
 /// A structure for deserializing bencode into Rust values.
 #[derive(Debug)]
 pub struct Deserializer<R: Read> {
@@ -246,9 +258,8 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     }
 
     forward_to_deserialize_any! {
-        i64 seq bool i8 i16 i32 u8 u16 u32
-        u64 f32 f64 char unit bytes byte_buf map unit_struct tuple_struct tuple
-        ignored_any struct
+        bool char i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 unit bytes byte_buf seq map unit_struct
+        tuple_struct ignored_any struct
     }
 
     #[inline]
@@ -287,10 +298,7 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     {
         let bytes = self.parse().and_then(|r| match r {
             ParseResult::Bytes(bytes) => Ok(bytes),
-            ParseResult::Int(i) => Err(Error::invalid_type(Unexpected::Signed(i), &"Bytes")),
-            ParseResult::List => Err(Error::invalid_type(Unexpected::Seq, &"Bytes")),
-            ParseResult::Map => Err(Error::invalid_type(Unexpected::Map, &"Bytes")),
-            ParseResult::End => Err(Error::EndOfStream),
+            _ => Err(r.to_unexpected_error("bytes")),
         })?;
 
         let s = str::from_utf8(&bytes)
@@ -310,6 +318,18 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
         V: de::Visitor<'de>,
     {
         self.deserialize_str(visitor)
+    }
+
+    fn deserialize_tuple<V>(self, size: usize, visitor: V) -> Result<V::Value>
+    where
+        V: de::Visitor<'de>,
+    {
+        self.parse().and_then(|r| match r {
+            ParseResult::List => Ok(()),
+            _ => Err(r.to_unexpected_error("list")),
+        })?;
+
+        visitor.visit_seq(BencodeAccess::new(self, Some(size)))
     }
 }
 
