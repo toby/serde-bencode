@@ -429,3 +429,18 @@ fn ser_de_flattened_adjacently_tagged_enum() {
 fn ser_de_vec_of_tuples() {
     test_ser_de_eq(vec![(1, 2), (3, 4)]);
 }
+
+// https://github.com/toby/serde-bencode/issues/17
+#[test]
+fn ser_de_field_vec_tuple() {
+    #[derive(Deserialize, Serialize, Eq, PartialEq, Debug)]
+    struct Foo {
+        bar: Vec<(u16,)>,
+    }
+
+    let foo = Foo {
+        bar: vec![(1,), (3,)],
+    };
+
+    test_ser_de_eq(foo);
+}
