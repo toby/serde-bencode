@@ -365,8 +365,8 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 ///
 /// let bytes = serde_bencode::to_bytes(&address)?;
 /// assert_eq!(
-///     String::from_utf8(bytes),
-///     Ok("d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".to_string()),
+///     String::from_utf8(bytes).unwrap(),
+///     "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke",
 /// );
 /// # Ok(())
 /// # }
