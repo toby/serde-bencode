@@ -444,3 +444,8 @@ fn ser_de_field_vec_tuple() {
 
     test_ser_de_eq(foo);
 }
+
+#[test]
+fn deserialize_too_long_byte_string() {
+    let _: Result<Value> = from_str("123456789123:1");
+}
