@@ -444,3 +444,35 @@ fn ser_de_field_vec_tuple() {
 
     test_ser_de_eq(foo);
 }
+
+#[test]
+fn ser_de_flattened_enum() {
+    #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+    struct KrpcMessage {
+        message_type: MessageType,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+    enum MessageType {
+        Query,
+        Response,
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+    struct KrpcResponse {
+        #[serde(flatten)]
+        krpc: KrpcMessage,
+    }
+
+    // Passes
+    test_ser_de_eq(KrpcMessage {
+        message_type: MessageType::Response,
+    });
+
+    // Fails
+    test_ser_de_eq(KrpcResponse {
+        krpc: KrpcMessage {
+            message_type: MessageType::Response,
+        },
+    });
+}
