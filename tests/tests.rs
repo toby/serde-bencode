@@ -2,13 +2,17 @@ extern crate serde_bencode;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde_bencode::de;
 use serde_bencode::de::{from_bytes, from_str};
 use serde_bencode::error::Result;
 use serde_bencode::ser::{to_bytes, to_string, Serializer};
 use serde_bencode::value::Value;
+use serde_bytes::ByteBuf;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::fs;
+use std::io::Read;
 
 fn test_value_ser_de<T: Into<Value>>(a: T) {
     let a = a.into();
@@ -443,4 +447,117 @@ fn ser_de_field_vec_tuple() {
     };
 
     test_ser_de_eq(foo);
+}
+
+#[derive(Debug, Deserialize)]
+struct Node(String, i64);
+
+#[derive(Debug, Deserialize)]
+struct File {
+    path: Vec<String>,
+    length: i64,
+    #[serde(default)]
+    md5sum: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Info {
+    name: String,
+    pieces: ByteBuf,
+    #[serde(rename = "piece length")]
+    piece_length: i64,
+    #[serde(default)]
+    md5sum: Option<String>,
+    #[serde(default)]
+    length: Option<i64>,
+    #[serde(default)]
+    files: Option<Vec<File>>,
+    #[serde(default)]
+    private: Option<u8>,
+    #[serde(default)]
+    path: Option<Vec<String>>,
+    #[serde(default)]
+    #[serde(rename = "root hash")]
+    root_hash: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Torrent {
+    info: Info,
+    #[serde(default)]
+    announce: Option<String>,
+    #[serde(default)]
+    nodes: Option<Vec<Node>>,
+    #[serde(default)]
+    encoding: Option<String>,
+    #[serde(default)]
+    httpseeds: Option<Vec<String>>,
+    #[serde(default)]
+    #[serde(rename = "announce-list")]
+    announce_list: Option<Vec<Vec<String>>>,
+    #[serde(default)]
+    #[serde(rename = "creation date")]
+    creation_date: Option<i64>,
+    #[serde(rename = "comment")]
+    comment: Option<String>,
+    #[serde(default)]
+    #[serde(rename = "created by")]
+    created_by: Option<String>,
+}
+
+fn render_torrent(torrent: &Torrent) {
+    println!("announce:\t{:?}", torrent.announce);
+    println!("nodes:\t\t{:?}", torrent.nodes);
+    if let Some(al) = &torrent.announce_list {
+        for a in al {
+            println!("announce list:\t{}", a[0]);
+        }
+    }
+    println!("httpseeds:\t{:?}", torrent.httpseeds);
+    println!("creation date:\t{:?}", torrent.creation_date);
+    println!("comment:\t{:?}", torrent.comment);
+    println!("created by:\t{:?}", torrent.created_by);
+    println!("encoding:\t{:?}", torrent.encoding);
+
+    println!("name:\t\t{}", torrent.info.name);
+    println!("pieces length:\t\t{}", torrent.info.pieces.len());
+    println!("piece length:\t{:?}", torrent.info.piece_length);
+    println!("private:\t{:?}", torrent.info.private);
+    println!("root hash:\t{:?}", torrent.info.root_hash);
+    println!("md5sum:\t\t{:?}", torrent.info.md5sum);
+    println!("length:\t\t{:?}", torrent.info.length);
+    println!("path:\t\t{:?}", torrent.info.path);
+    if let Some(files) = &torrent.info.files {
+        for f in files {
+            println!("file path:\t{:?}", f.path);
+            println!("file length:\t{}", f.length);
+            println!("file md5sum:\t{:?}", f.md5sum);
+        }
+    }
+}
+
+#[test]
+fn deserialize_full_torrent_files() {
+    let torrents_dir = "./tests/fixtures/torrents";
+    let paths = fs::read_dir(torrents_dir).expect("Failed to read torrents directory");
+
+    for path in paths {
+        let path = path.expect("Failed to read path").path();
+        if path.extension().unwrap_or_default() == "torrent" {
+            println!("Parsing torrent file: {path:?}");
+
+            let mut file = std::fs::File::open(&path).expect("Failed to open torrent file");
+            let mut bytes = Vec::new();
+
+            file.read_to_end(&mut bytes)
+                .expect("Failed to read torrent file to end");
+
+            match de::from_bytes::<Torrent>(&bytes) {
+                Ok(t) => render_torrent(&t),
+                Err(e) => {
+                    panic!("ERROR: {}", e)
+                }
+            }
+        }
+    }
 }
