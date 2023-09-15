@@ -544,6 +544,8 @@ fn deserialize_full_torrent_files() {
     for path in paths {
         let path = path.expect("Failed to read path").path();
         if path.extension().unwrap_or_default() == "torrent" {
+            println!("Parsing torrent file: {path:?}");
+
             let mut file = std::fs::File::open(&path).expect("Failed to open torrent file");
             let mut bytes = Vec::new();
 
@@ -552,7 +554,9 @@ fn deserialize_full_torrent_files() {
 
             match de::from_bytes::<Torrent>(&bytes) {
                 Ok(t) => render_torrent(&t),
-                Err(e) => println!("ERROR: {e:?}"),
+                Err(e) => {
+                    panic!("ERROR: {}", e)
+                }
             }
         }
     }
