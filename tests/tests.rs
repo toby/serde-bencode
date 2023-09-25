@@ -476,3 +476,8 @@ fn ser_de_flattened_enum() {
         },
     });
 }
+
+#[test]
+fn deserialize_too_long_byte_string() {
+    let _: Result<Value> = from_str("123456789123:1");
+}
