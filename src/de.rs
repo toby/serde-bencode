@@ -5,6 +5,7 @@ use serde::{
     de::{self, Error as _, Unexpected},
     forward_to_deserialize_any,
 };
+use std::convert::TryFrom;
 use std::io::Read;
 use std::str;
 
@@ -210,11 +211,18 @@ impl<'de, R: Read> Deserializer<R> {
 
     fn parse_bytes(&mut self, len_char: u8) -> Result<Vec<u8>> {
         let len = self.parse_bytes_len(len_char)?;
-        let mut buf = vec![0u8; len];
+        let mut buf = Vec::new();
+
+        let len_usize = u64::try_from(len)
+            .map_err(|_| Error::InvalidLength(String::from("byte string length too large")))?;
+
         let actual_len = self
             .reader
-            .read(buf.as_mut_slice())
+            .by_ref()
+            .take(len_usize)
+            .read_to_end(&mut buf)
             .map_err(Error::IoError)?;
+
         if len != actual_len {
             return Err(Error::EndOfStream);
         }
