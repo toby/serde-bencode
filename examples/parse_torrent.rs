@@ -1,12 +1,12 @@
 extern crate serde;
-extern crate serde_bencode;
+extern crate torrust_serde_bencode;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_bytes;
 
-use serde_bencode::de;
 use serde_bytes::ByteBuf;
 use std::io::{self, Read};
+use torrust_serde_bencode::de;
 
 #[derive(Debug, Deserialize)]
 struct Node(String, i64);
@@ -21,23 +21,23 @@ struct File {
 
 #[derive(Debug, Deserialize)]
 struct Info {
-    name: String,
-    pieces: ByteBuf,
+    pub name: String,
+    pub pieces: ByteBuf,
     #[serde(rename = "piece length")]
-    piece_length: i64,
+    pub piece_length: i64,
     #[serde(default)]
-    md5sum: Option<String>,
+    pub md5sum: Option<String>,
     #[serde(default)]
-    length: Option<i64>,
+    pub length: Option<i64>,
     #[serde(default)]
-    files: Option<Vec<File>>,
+    pub files: Option<Vec<File>>,
     #[serde(default)]
-    private: Option<u8>,
+    pub private: Option<u8>,
     #[serde(default)]
-    path: Option<Vec<String>>,
+    pub path: Option<Vec<String>>,
     #[serde(default)]
     #[serde(rename = "root hash")]
-    root_hash: Option<String>,
+    pub root_hash: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -9,7 +9,7 @@ use std::io::Read;
 use std::str;
 
 #[doc(hidden)]
-// TODO: This should be pub(crate).
+// todo: This should be pub(crate).
 pub struct BencodeAccess<'a, R: 'a + Read> {
     de: &'a mut Deserializer<R>,
     len: Option<usize>,

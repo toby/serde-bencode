@@ -1,14 +1,14 @@
-extern crate serde_bencode;
+extern crate torrust_serde_bencode;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use serde_bencode::de::{from_bytes, from_str};
-use serde_bencode::error::Result;
-use serde_bencode::ser::{to_bytes, to_string, Serializer};
-use serde_bencode::value::Value;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
+use torrust_serde_bencode::de::{from_bytes, from_str};
+use torrust_serde_bencode::error::Result;
+use torrust_serde_bencode::ser::{to_bytes, to_string, Serializer};
+use torrust_serde_bencode::value::Value;
 
 fn test_value_ser_de<T: Into<Value>>(a: T) {
     let a = a.into();

@@ -1,16 +1,15 @@
 #![feature(test)]
 
-extern crate test;
 extern crate serde;
+extern crate test;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_bencode;
+extern crate torrust_serde_bencode;
 
-use test::Bencher;
 use serde::Serialize;
-use serde_bencode::ser::Serializer;
-use serde_bencode::de::from_bytes;
-
+use test::Bencher;
+use torrust_serde_bencode::de::from_bytes;
+use torrust_serde_bencode::ser::Serializer;
 
 #[bench]
 fn ser_de_simple(b: &mut Bencher) {
@@ -21,7 +20,7 @@ fn ser_de_simple(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let a = Fake {a: 2, b: 7};
+        let a = Fake { a: 2, b: 7 };
         let mut ser = Serializer::new();
         a.serialize(&mut ser).unwrap();
         let b: Fake = from_bytes(ser.as_ref()).unwrap();
@@ -44,7 +43,10 @@ fn ser_de_nested(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let a = FakeB {a: 2, b: FakeA {a: 7, b: 9}};
+        let a = FakeB {
+            a: 2,
+            b: FakeA { a: 7, b: 9 },
+        };
         let mut ser = Serializer::new();
         a.serialize(&mut ser).unwrap();
         let b: FakeB = from_bytes(ser.as_ref()).unwrap();
