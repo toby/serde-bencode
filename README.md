@@ -1,6 +1,6 @@
 # Torrust Serde Bencode
 
-[![Testing](https://github.com/torrust/torrust-serde-bencode/actions/workflows/testing.yaml/badge.svg)](https://github.com/torrust/torrust-serde-bencode/actions/workflows/testing.yaml)
+[![Checking](https://github.com/torrust/torrust-serde-bencode/actions/workflows/checking.yml/badge.svg)](https://github.com/torrust/torrust-serde-bencode/actions/workflows/checking.yml) [![Formatting](https://github.com/torrust/torrust-serde-bencode/actions/workflows/formatting.yml/badge.svg)](https://github.com/torrust/torrust-serde-bencode/actions/workflows/formatting.yml) [![Testing](https://github.com/torrust/torrust-serde-bencode/actions/workflows/testing.yaml/badge.svg)](https://github.com/torrust/torrust-serde-bencode/actions/workflows/testing.yaml)
 
 A [Serde](https://github.com/serde-rs/serde) backed [Bencode](https://en.wikipedia.org/wiki/Bencode)
 encoding/decoding library for Rust.
