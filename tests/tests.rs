@@ -138,12 +138,12 @@ fn deserialize_to_vec() {
 
 #[test]
 fn deserialize_to_freestyle() {
+    // cspell:disable-next-line
     let s = "li666e4:wontd3:onei666e4:yoyoli69ei89e4:yoyoeee";
     test_value_de_ser(s);
 }
 
 #[test]
-#[ignore]
 #[should_panic(expected = "assertion failed")]
 fn trailing_chars() {
     let s = "i666ed";
