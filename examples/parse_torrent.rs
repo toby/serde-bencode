@@ -1,8 +1,5 @@
-extern crate serde;
-extern crate torrust_serde_bencode;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_bytes;
 
 use serde_bytes::ByteBuf;
 use std::io::{self, Read};
@@ -19,6 +16,7 @@ struct File {
     md5sum: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct Info {
     pub name: String,

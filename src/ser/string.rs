@@ -8,12 +8,12 @@ use std::str;
 
 struct Expected;
 impl de::Expected for Expected {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "a string or bytes")
     }
 }
 
-fn unexpected<T>(unexp: de::Unexpected) -> Result<T> {
+fn unexpected<T>(unexp: de::Unexpected<'_>) -> Result<T> {
     Err(de::Error::invalid_type(unexp, &Expected))
 }
 
