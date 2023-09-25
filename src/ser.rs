@@ -90,7 +90,7 @@ pub struct SerializeMap<'a> {
 }
 
 impl<'a> SerializeMap<'a> {
-    pub fn new(ser: &'a mut Serializer, len: usize) -> SerializeMap {
+    pub fn new(ser: &'a mut Serializer, len: usize) -> SerializeMap<'_> {
         SerializeMap {
             ser,
             entries: Vec::with_capacity(len),

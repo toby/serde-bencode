@@ -54,7 +54,7 @@ struct ValueVisitor;
 impl<'de> de::Visitor<'de> for ValueVisitor {
     type Value = Value;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("any valid BEncode value")
     }
 

@@ -1,6 +1,7 @@
 {
     "words": [
         "bencoded",
+        "httpseeds",
         "Serde"
     ],
     "enableFiletypes": [

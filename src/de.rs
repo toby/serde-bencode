@@ -11,7 +11,7 @@ use std::str;
 
 #[doc(hidden)]
 // todo: This should be pub(crate).
-pub struct BencodeAccess<'a, R: 'a + Read> {
+pub struct BencodeAccess<'a, R: Read> {
     de: &'a mut Deserializer<R>,
     len: Option<usize>,
 }
