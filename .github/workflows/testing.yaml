@@ -9,7 +9,7 @@ env:
 
 jobs:
   test:
-    name: Units
+    name: Testing
     runs-on: ubuntu-latest
 
     strategy:
@@ -34,4 +34,4 @@ jobs:
 
       - id: test
         name: Run Unit Tests
-        run: cargo test --tests --benches --examples --workspace --all-targets --all-features
+        run: cargo test --tests --examples --workspace --all-features

@@ -1,8 +1,13 @@
 {
     "words": [
         "bencoded",
+        "Calisota",
+        "Duckburg",
         "httpseeds",
-        "Serde"
+        "libfuzzer",
+        "newtype",
+        "Serde",
+        "Walke"
     ],
     "enableFiletypes": [
         "dockerfile",

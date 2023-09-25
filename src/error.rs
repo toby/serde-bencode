@@ -9,7 +9,7 @@ use std::fmt::Display;
 use std::io::Error as IoError;
 use std::result::Result as StdResult;
 
-/// Alias for `Result<T, serde_bencode::Error>`.
+/// Alias for `Result<T, torrust_serde_bencode::Error>`.
 pub type Result<T> = StdResult<T, Error>;
 
 /// Represents all possible errors which can occur when serializing or deserializing bencode.
@@ -107,14 +107,14 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match *self {
             Error::IoError(ref error) => return error.fmt(f),
-            Error::InvalidType(ref s) => s,
-            Error::InvalidValue(ref s) => s,
-            Error::InvalidLength(ref s) => s,
-            Error::UnknownVariant(ref s) => s,
-            Error::UnknownField(ref s) => s,
-            Error::MissingField(ref s) => s,
-            Error::DuplicateField(ref s) => s,
-            Error::Custom(ref s) => s,
+            Error::InvalidType(ref s)
+            | Error::InvalidValue(ref s)
+            | Error::InvalidLength(ref s)
+            | Error::UnknownVariant(ref s)
+            | Error::UnknownField(ref s)
+            | Error::MissingField(ref s)
+            | Error::DuplicateField(ref s)
+            | Error::Custom(ref s) => s,
             Error::EndOfStream => "End of stream",
         };
         f.write_str(message)
