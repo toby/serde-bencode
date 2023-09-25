@@ -1,10 +1,10 @@
 [package]
-name = "serde_bencode"
+name = "torrust-serde-bencode"
 description = "A Serde backed Bencode encoding/decoding library for Rust."
 version = "0.2.3"
-authors = ["Toby Padilla <tobypadilla@gmail.com>"]
-repository = "https://github.com/toby/serde-bencode"
-documentation = "https://docs.rs/serde_bencode/"
+authors = ["Toby Padilla <tobypadilla@gmail.com>", "Nautilus Cyberneering <info@nautilus-cyberneering.de>"]
+repository = "https://github.com/torrust/torrust-serde-bencode"
+documentation = "https://docs.rs/torrust-serde-bencode/"
 license = "MIT"
 keywords = ["bencode", "serialize", "deserialize", "serde"]
 edition = "2018"
