@@ -22,9 +22,9 @@ fn unexpected<T>(unexp: de::Unexpected<'_>) -> Result<T> {
 /// The string is returned as Result<Vec<u8>>::Ok without any prefixing (without bencode string
 /// length prefix).
 // TODO: This should be pub(crate).
-pub struct StringSerializer;
+pub struct Serializer;
 
-impl<'a> ser::Serializer for &'a mut StringSerializer {
+impl<'a> ser::Serializer for &'a mut Serializer {
     type Ok = Vec<u8>;
     type Error = Error;
     type SerializeSeq = ser::Impossible<Vec<u8>, Error>;
@@ -39,31 +39,31 @@ impl<'a> ser::Serializer for &'a mut StringSerializer {
         unexpected(de::Unexpected::Bool(value))
     }
     fn serialize_i8(self, value: i8) -> Result<Vec<u8>> {
-        self.serialize_i64(value as i64)
+        self.serialize_i64(i64::from(value))
     }
     fn serialize_i16(self, value: i16) -> Result<Vec<u8>> {
-        self.serialize_i64(value as i64)
+        self.serialize_i64(i64::from(value))
     }
     fn serialize_i32(self, value: i32) -> Result<Vec<u8>> {
-        self.serialize_i64(value as i64)
+        self.serialize_i64(i64::from(value))
     }
     fn serialize_i64(self, value: i64) -> Result<Vec<u8>> {
         unexpected(de::Unexpected::Signed(value))
     }
     fn serialize_u8(self, value: u8) -> Result<Vec<u8>> {
-        self.serialize_u64(value as u64)
+        self.serialize_u64(u64::from(value))
     }
     fn serialize_u16(self, value: u16) -> Result<Vec<u8>> {
-        self.serialize_u64(value as u64)
+        self.serialize_u64(u64::from(value))
     }
     fn serialize_u32(self, value: u32) -> Result<Vec<u8>> {
-        self.serialize_u64(value as u64)
+        self.serialize_u64(u64::from(value))
     }
     fn serialize_u64(self, value: u64) -> Result<Vec<u8>> {
         unexpected(de::Unexpected::Unsigned(value))
     }
     fn serialize_f32(self, value: f32) -> Result<Vec<u8>> {
-        self.serialize_f64(value as f64)
+        self.serialize_f64(f64::from(value))
     }
     fn serialize_f64(self, value: f64) -> Result<Vec<u8>> {
         unexpected(de::Unexpected::Float(value))

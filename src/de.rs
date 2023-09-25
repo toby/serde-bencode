@@ -120,8 +120,7 @@ impl<'de, 'a, R: 'a + Read> de::EnumAccess<'de> for BencodeAccess<'a, R> {
             }
             ParseResult::Map => Ok((seed.deserialize(&mut *self.de)?, self)),
             t => Err(Error::InvalidValue(format!(
-                "Expected bytes or map; got `{:?}`",
-                t
+                "Expected bytes or map; got `{t:?}`"
             ))),
         }
     }
@@ -146,7 +145,7 @@ impl ParseResult {
             Self::Bytes(bytes) => Error::invalid_type(Unexpected::Bytes(bytes), &expected),
             Self::List => Error::invalid_type(Unexpected::Seq, &expected),
             Self::Map => Error::invalid_type(Unexpected::Map, &expected),
-            Self::End => Error::custom(format_args!("unexpected end, expected {}", expected)),
+            Self::End => Error::custom(format_args!("unexpected end, expected {expected}")),
         }
     }
 }
@@ -158,6 +157,7 @@ pub struct Deserializer<R: Read> {
     next: Option<ParseResult>,
 }
 
+#[allow(clippy::extra_unused_lifetimes)]
 impl<'de, R: Read> Deserializer<R> {
     /// Create a new deserializer.
     pub fn new(reader: R) -> Deserializer<R> {
@@ -177,7 +177,7 @@ impl<'de, R: Read> Deserializer<R> {
                         Error::InvalidValue("Non UTF-8 integer encoding".to_string())
                     })?;
                     let len_int = len_str.parse().map_err(|_| {
-                        Error::InvalidValue(format!("Can't parse `{}` as integer", len_str))
+                        Error::InvalidValue(format!("Can't parse `{len_str}` as integer"))
                     })?;
                     return Ok(len_int);
                 }
@@ -200,7 +200,7 @@ impl<'de, R: Read> Deserializer<R> {
                         Error::InvalidValue("Non UTF-8 integer encoding".to_string())
                     })?;
                     let len_int = len_str.parse().map_err(|_| {
-                        Error::InvalidValue(format!("Can't parse `{}` as string length", len_str))
+                        Error::InvalidValue(format!("Can't parse `{len_str}` as string length"))
                     })?;
                     return Ok(len_int);
                 }
@@ -255,12 +255,12 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
     type Error = Error;
 
     #[inline]
-    fn deserialize_any<V: de::Visitor<'de>>(mut self, visitor: V) -> Result<V::Value> {
+    fn deserialize_any<V: de::Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         match self.parse()? {
             ParseResult::Int(i) => visitor.visit_i64(i),
             ParseResult::Bytes(s) => visitor.visit_bytes(s.as_ref()),
-            ParseResult::List => visitor.visit_seq(BencodeAccess::new(&mut self, None)),
-            ParseResult::Map => visitor.visit_map(BencodeAccess::new(&mut self, None)),
+            ParseResult::List => visitor.visit_seq(BencodeAccess::new(self, None)),
+            ParseResult::Map => visitor.visit_map(BencodeAccess::new(self, None)),
             ParseResult::End => Err(Error::EndOfStream),
         }
     }
@@ -345,7 +345,7 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
 ///
 /// # Examples
 /// ```
-/// # fn main() -> Result<(), serde_bencode::Error> {
+/// # fn main() -> Result<(), torrust_serde_bencode::Error> {
 /// use serde_derive::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -355,7 +355,7 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
 /// }
 ///
 /// let encoded = "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".to_string();
-/// let decoded: Address = serde_bencode::from_str(&encoded)?;
+/// let decoded: Address = torrust_serde_bencode::from_str(&encoded)?;
 ///
 /// assert_eq!(
 ///     decoded,
@@ -384,7 +384,7 @@ where
 ///
 /// # Examples
 /// ```
-/// # fn main() -> Result<(), serde_bencode::Error> {
+/// # fn main() -> Result<(), torrust_serde_bencode::Error> {
 /// use serde_derive::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -394,7 +394,7 @@ where
 /// }
 ///
 /// let encoded = "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".as_bytes();
-/// let decoded: Address = serde_bencode::from_bytes(&encoded)?;
+/// let decoded: Address = torrust_serde_bencode::from_bytes(&encoded)?;
 ///
 /// assert_eq!(
 ///     decoded,

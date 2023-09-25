@@ -23,6 +23,7 @@ fn test_value_de_ser(s: &str) {
     assert_eq!(s, e);
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn test_ser_de_eq<T>(a: T)
 where
     T: Serialize + DeserializeOwned + Debug + Eq,
@@ -186,12 +187,14 @@ fn serialize_struct() {
 
 #[test]
 fn deserialize_to_struct() {
-    let b = "d1:xi1111e1:y3:doge";
     #[derive(PartialEq, Debug, Deserialize)]
     struct Fake {
         y: String,
         x: i64,
     }
+
+    let b = "d1:xi1111e1:y3:doge";
+
     assert_eq!(
         from_str::<Fake>(b).unwrap(),
         Fake {
@@ -203,7 +206,6 @@ fn deserialize_to_struct() {
 
 #[test]
 fn deserialize_to_struct_with_option() {
-    let b = "d1:xi1111e1:y3:dog1:z2:yoe";
     #[derive(PartialEq, Debug, Deserialize)]
     struct Fake {
         y: String,
@@ -213,7 +215,11 @@ fn deserialize_to_struct_with_option() {
         #[serde(default)]
         a: Option<String>,
     }
+
+    let b = "d1:xi1111e1:y3:dog1:z2:yoe";
+
     let r: Fake = from_str(b).unwrap();
+
     assert_eq!(
         r,
         Fake {
@@ -237,7 +243,6 @@ fn deserialize_to_value() {
 
 #[test]
 fn deserialize_to_value_struct_mix() {
-    let b = "d1:xi1111e1:y3:dog1:zi66e1:qli666eee";
     #[derive(PartialEq, Debug, Deserialize)]
     struct Fake {
         y: String,
@@ -245,7 +250,11 @@ fn deserialize_to_value_struct_mix() {
         z: Value,
         q: Vec<i64>,
     }
+
+    let b = "d1:xi1111e1:y3:dog1:zi66e1:qli666eee";
+
     let r: Fake = from_str(b).unwrap();
+
     assert_eq!(
         r,
         Fake {
@@ -470,15 +479,15 @@ fn ser_de_vec_of_tuples() {
 #[test]
 fn ser_de_field_vec_tuple() {
     #[derive(Deserialize, Serialize, Eq, PartialEq, Debug)]
-    struct Foo {
+    struct StructWithVecOfPairs {
         bar: Vec<(u16,)>,
     }
 
-    let foo = Foo {
+    let deserialized_struct = StructWithVecOfPairs {
         bar: vec![(1,), (3,)],
     };
 
-    test_ser_de_eq(foo);
+    test_ser_de_eq(deserialized_struct);
 }
 
 #[test]

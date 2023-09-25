@@ -18,11 +18,12 @@
 //!         price: 130,
 //!     };
 //!
-//!     let serialized = serde_bencode::to_string(&apple)?;
-//!
+//!     let serialized = torrust_serde_bencode::to_string(&apple)?;
+//!     
+//!     // cspell:disable-next-line
 //!     assert_eq!(serialized, "d4:name5:Apple5:pricei130ee".to_string());
 //!
-//!     let deserialized: Product = serde_bencode::from_str(&serialized)?;
+//!     let deserialized: Product = torrust_serde_bencode::from_str(&serialized)?;
 //!
 //!     assert_eq!(
 //!         deserialized,

@@ -15,11 +15,13 @@ pub struct Serializer {
 
 impl Serializer {
     /// Create a new serializer.
+    #[must_use]
     pub fn new() -> Serializer {
         Self::default()
     }
 
     /// Consume the serializer and return the contents as a byte vector.
+    #[must_use]
     pub fn into_vec(self) -> Vec<u8> {
         self.buf
     }
@@ -82,7 +84,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
 }
 
 #[doc(hidden)]
-// TODO: This should be pub(crate).
+// todo: This should be pub(crate).
 pub struct SerializeMap<'a> {
     ser: &'a mut Serializer,
     entries: Vec<(Vec<u8>, Vec<u8>)>,
@@ -105,7 +107,7 @@ impl<'a> SerializeMap<'a> {
             ));
         }
         let mut entries = mem::take(&mut self.entries);
-        entries.sort_by(|&(ref a, _), &(ref b, _)| a.cmp(b));
+        entries.sort_by(|(a, _), (b, _)| a.cmp(b));
         self.ser.push("d");
         for (k, v) in entries {
             ser::Serializer::serialize_bytes(&mut *self.ser, k.as_ref())?;
@@ -126,7 +128,7 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
                     .to_string(),
             ));
         }
-        self.cur_key = Some(key.serialize(&mut string::StringSerializer)?);
+        self.cur_key = Some(key.serialize(&mut string::Serializer)?);
         Ok(())
     }
     fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<()> {
@@ -154,7 +156,7 @@ impl<'a> ser::SerializeMap for SerializeMap<'a> {
                     .to_string(),
             ));
         }
-        let key = key.serialize(&mut string::StringSerializer)?;
+        let key = key.serialize(&mut string::Serializer)?;
         let mut ser = Serializer::new();
         value.serialize(&mut ser)?;
         let value = ser.into_vec();
@@ -212,16 +214,16 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     type SerializeStructVariant = SerializeMap<'a>;
 
     fn serialize_bool(self, value: bool) -> Result<()> {
-        self.serialize_i64(value as i64)
+        self.serialize_i64(i64::from(value))
     }
     fn serialize_i8(self, value: i8) -> Result<()> {
-        self.serialize_i64(value as i64)
+        self.serialize_i64(i64::from(value))
     }
     fn serialize_i16(self, value: i16) -> Result<()> {
-        self.serialize_i64(value as i64)
+        self.serialize_i64(i64::from(value))
     }
     fn serialize_i32(self, value: i32) -> Result<()> {
-        self.serialize_i64(value as i64)
+        self.serialize_i64(i64::from(value))
     }
     fn serialize_i64(self, value: i64) -> Result<()> {
         self.push("i");
@@ -230,13 +232,13 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Ok(())
     }
     fn serialize_u8(self, value: u8) -> Result<()> {
-        self.serialize_u64(value as u64)
+        self.serialize_u64(u64::from(value))
     }
     fn serialize_u16(self, value: u16) -> Result<()> {
-        self.serialize_u64(value as u64)
+        self.serialize_u64(u64::from(value))
     }
     fn serialize_u32(self, value: u32) -> Result<()> {
-        self.serialize_u64(value as u64)
+        self.serialize_u64(u64::from(value))
     }
     fn serialize_u64(self, value: u64) -> Result<()> {
         self.push("i");
@@ -349,7 +351,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 ///
 /// # Examples
 /// ```
-/// # fn main() -> Result<(), serde_bencode::Error> {
+/// # fn main() -> Result<(), torrust_serde_bencode::Error> {
 /// use serde_derive::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -363,7 +365,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 ///     city: "Duckburg, Calisota".to_string(),
 /// };
 ///
-/// let bytes = serde_bencode::to_bytes(&address)?;
+/// let bytes = torrust_serde_bencode::to_bytes(&address)?;
 /// assert_eq!(
 ///     String::from_utf8(bytes).unwrap(),
 ///     "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke",
@@ -386,7 +388,7 @@ pub fn to_bytes<T: ser::Serialize>(b: &T) -> Result<Vec<u8>> {
 ///
 /// # Examples
 /// ```
-/// # fn main() -> Result<(), serde_bencode::Error> {
+/// # fn main() -> Result<(), torrust_serde_bencode::Error> {
 /// use serde_derive::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -401,7 +403,7 @@ pub fn to_bytes<T: ser::Serialize>(b: &T) -> Result<Vec<u8>> {
 /// };
 ///
 /// assert_eq!(
-///     serde_bencode::to_string(&address)?,
+///     torrust_serde_bencode::to_string(&address)?,
 ///     "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".to_string(),
 /// );
 /// # Ok(())
@@ -416,6 +418,6 @@ pub fn to_string<T: ser::Serialize>(b: &T) -> Result<String> {
     let mut ser = Serializer::new();
     b.serialize(&mut ser)?;
     str::from_utf8(ser.as_ref())
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .map_err(|_| Error::InvalidValue("Not an UTF-8".to_string()))
 }

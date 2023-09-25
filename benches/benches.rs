@@ -1,10 +1,8 @@
 #![feature(test)]
 
-extern crate serde;
 extern crate test;
 #[macro_use]
 extern crate serde_derive;
-extern crate torrust_serde_bencode;
 
 use serde::Serialize;
 use test::Bencher;

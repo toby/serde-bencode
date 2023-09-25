@@ -63,6 +63,7 @@ impl<'de> de::Visitor<'de> for ValueVisitor {
         Ok(Value::Int(value))
     }
 
+    #[allow(clippy::cast_possible_wrap)]
     #[inline]
     fn visit_u64<E>(self, value: u64) -> Result<Value, E> {
         Ok(Value::Int(value as i64))

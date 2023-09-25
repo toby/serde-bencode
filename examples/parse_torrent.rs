@@ -97,8 +97,8 @@ fn main() {
     match handle.read_to_end(&mut buffer) {
         Ok(_) => match de::from_bytes::<Torrent>(&buffer) {
             Ok(t) => render_torrent(&t),
-            Err(e) => println!("ERROR: {:?}", e),
+            Err(e) => println!("ERROR: {e:?}"),
         },
-        Err(e) => println!("ERROR: {:?}", e),
+        Err(e) => println!("ERROR: {e:?}"),
     }
 }
