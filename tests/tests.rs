@@ -260,6 +260,44 @@ fn deserialize_to_value_struct_mix() {
 }
 
 #[test]
+fn deserialize_to_nested_list() {
+    // [
+    //   [
+    //     "188.163.121.224",
+    //     56711
+    //   ],
+    //   [
+    //     "162.250.131.26",
+    //     13386
+    //   ]
+    // ]
+
+    #[derive(PartialEq, Debug, Deserialize)]
+    struct Item {
+        ip: String,
+        port: i64,
+    }
+
+    let b = "d1:0l15:188.163.121.224i56711ee1:1l14:162.250.131.26i13386eee";
+
+    let r: Vec<Item> = from_str(b).unwrap();
+
+    assert_eq!(
+        r,
+        vec![
+            Item {
+                ip: "188.163.121.224".to_string(),
+                port: 56711
+            },
+            Item {
+                ip: "162.250.131.26".to_string(),
+                port: 13386
+            }
+        ]
+    );
+}
+
+#[test]
 fn serialize_lexical_sorted_keys() {
     #[derive(Serialize)]
     struct Fake {
