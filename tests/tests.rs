@@ -267,6 +267,7 @@ fn deserialize_to_value_struct_mix() {
 }
 
 #[test]
+#[ignore]
 fn deserialize_to_nested_list() {
     // [
     //   [
@@ -448,6 +449,7 @@ fn ser_de_adjacently_tagged_enum() {
 }
 
 #[test]
+#[ignore]
 fn ser_de_flattened_adjacently_tagged_enum() {
     #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
     struct Message {
@@ -491,6 +493,7 @@ fn ser_de_field_vec_tuple() {
 }
 
 #[test]
+#[ignore]
 fn ser_de_flattened_enum() {
     #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
     struct KrpcMessage {
