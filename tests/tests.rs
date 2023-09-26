@@ -615,3 +615,232 @@ fn ser_de_flattened_enum() {
 fn deserialize_too_long_byte_string() {
     let _unused: Result<Value> = from_str("123456789123:1");
 }
+
+mod torrent_file {
+    use serde_bytes::ByteBuf;
+    use serde_derive::{Deserialize, Serialize};
+    use std::fmt::Debug;
+    use std::fs;
+    use std::io::Read;
+    use torrust_serde_bencode::de::{self, from_str};
+    use torrust_serde_bencode::ser::to_string;
+
+    #[test]
+    fn serialization() {
+        #[allow(dead_code)]
+        #[derive(PartialEq, Debug, Serialize, Deserialize)]
+        struct Torrent {
+            info: Info,
+
+            #[serde(default)]
+            nodes: Option<Vec<Node>>,
+        }
+
+        #[allow(dead_code)]
+        #[derive(PartialEq, Debug, Serialize, Deserialize)]
+        struct Info {
+            #[serde(default)]
+            pub length: Option<i64>,
+
+            #[serde(default)]
+            pub name: String,
+
+            #[serde(rename = "piece length")]
+            pub piece_length: i64,
+
+            #[serde(default)]
+            pub pieces: ByteBuf,
+        }
+
+        #[derive(PartialEq, Debug, Serialize, Deserialize)]
+        struct Node(String, i64);
+
+        let torrent = Torrent {
+            info: Info {
+                name: "minimal.txt".to_string(),
+                pieces: ByteBuf::from(vec![b'p']),
+                piece_length: 1,
+                length: Some(8),
+            },
+            nodes: Some(vec![
+                Node("188.163.121.224".to_string(), 56711),
+                Node("162.250.131.26".to_string(), 13386),
+            ]),
+        };
+
+        // cspell:disable-next-line
+        assert_eq!(to_string(&torrent).unwrap(), "d4:infod6:lengthi8e4:name11:minimal.txt12:piece lengthi1e6:pieces1:pe5:nodesll15:188.163.121.224i56711eel14:162.250.131.26i13386eeee");
+    }
+
+    #[test]
+    fn deserialization() {
+        // todo: you cannot deserialize to the same struct used in serialization.
+        // It does not work with a tuple struct `struct Node(String, i64)`
+        // instead of a tuple `(String, i64)`.
+
+        #[allow(dead_code)]
+        #[derive(PartialEq, Debug, Serialize, Deserialize)]
+        struct Torrent {
+            info: Info,
+            #[serde(default)]
+            nodes: Option<Vec<(String, i64)>>,
+        }
+
+        #[allow(dead_code)]
+        #[derive(PartialEq, Debug, Serialize, Deserialize)]
+        struct Info {
+            #[serde(default)]
+            pub length: Option<i64>,
+
+            #[serde(default)]
+            pub name: String,
+
+            #[serde(rename = "piece length")]
+            pub piece_length: i64,
+
+            #[serde(default)]
+            pub pieces: ByteBuf,
+        }
+
+        #[derive(PartialEq, Debug, Serialize, Deserialize)]
+        struct Node(String, i64);
+
+        // cspell:disable-next-line
+        let b = "d4:infod6:lengthi8e4:name11:minimal.txt12:piece lengthi1e6:pieces1:pe5:nodesll15:188.163.121.224i56711eel14:162.250.131.26i13386eeee";
+
+        let r: Torrent = from_str(b).unwrap();
+
+        assert_eq!(
+            r,
+            Torrent {
+                info: Info {
+                    name: "minimal.txt".to_string(),
+                    pieces: ByteBuf::from(vec![b'p']),
+                    piece_length: 1,
+                    length: Some(8),
+                },
+                nodes: Some(vec![
+                    ("188.163.121.224".to_string(), 56711),
+                    ("162.250.131.26".to_string(), 13386),
+                ]),
+            }
+        );
+    }
+
+    #[allow(clippy::too_many_lines)]
+    #[test]
+    fn deserialize_full_torrent_fixtures() {
+        #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+        pub struct Torrent {
+            pub info: TorrentInfoDictionary, //
+            #[serde(default)]
+            pub announce: Option<String>,
+            #[serde(default)]
+            pub nodes: Option<Vec<(String, i64)>>,
+            #[serde(default)]
+            pub encoding: Option<String>,
+            #[serde(default)]
+            pub httpseeds: Option<Vec<String>>,
+            #[serde(default)]
+            #[serde(rename = "announce-list")]
+            pub announce_list: Option<Vec<Vec<String>>>,
+            #[serde(default)]
+            #[serde(rename = "creation date")]
+            pub creation_date: Option<i64>,
+            #[serde(default)]
+            pub comment: Option<String>,
+            #[serde(default)]
+            #[serde(rename = "created by")]
+            pub created_by: Option<String>,
+        }
+
+        #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
+        pub struct TorrentInfoDictionary {
+            pub name: String,
+            #[serde(default)]
+            pub pieces: ByteBuf,
+            #[serde(rename = "piece length")]
+            pub piece_length: i64,
+            #[serde(default)]
+            pub md5sum: Option<String>,
+            #[serde(default)]
+            pub length: Option<i64>,
+            #[serde(default)]
+            pub files: Option<Vec<TorrentFile>>,
+            #[serde(default)]
+            pub private: Option<u8>,
+            #[serde(default)]
+            pub path: Option<Vec<String>>,
+            #[serde(default)]
+            #[serde(rename = "root hash")]
+            pub root_hash: Option<String>,
+            #[serde(default)]
+            pub source: Option<String>,
+        }
+
+        #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
+        pub struct TorrentFile {
+            pub path: Vec<String>,
+            pub length: i64,
+            #[serde(default)]
+            pub md5sum: Option<String>,
+        }
+
+        fn render_torrent(torrent: &Torrent) {
+            println!("announce: {:?}", torrent.announce);
+            println!("nodes: {:?}", torrent.nodes);
+            if let Some(al) = &torrent.announce_list {
+                for a in al {
+                    println!("announce list: {}", a[0]);
+                }
+            }
+            println!("httpseeds: {:?}", torrent.httpseeds);
+            println!("creation date: {:?}", torrent.creation_date);
+            println!("comment: {:?}", torrent.comment);
+            println!("created by: {:?}", torrent.created_by);
+            println!("encoding: {:?}", torrent.encoding);
+
+            println!("name: {}", torrent.info.name);
+            println!("pieces length: {}", torrent.info.pieces.len());
+            println!("piece length: {:?}", torrent.info.piece_length);
+            println!("private: {:?}", torrent.info.private);
+            println!("root hash: {:?}", torrent.info.root_hash);
+            println!("md5sum: {:?}", torrent.info.md5sum);
+            println!("length: {:?}", torrent.info.length);
+            println!("path: {:?}", torrent.info.path);
+            if let Some(files) = &torrent.info.files {
+                for f in files {
+                    println!("file path: {:?}", f.path);
+                    println!("file length: {}", f.length);
+                    println!("file md5sum: {:?}", f.md5sum);
+                }
+            }
+        }
+
+        let torrents_dir = "./tests/fixtures/torrents";
+        let paths = fs::read_dir(torrents_dir).expect("Failed to read torrents directory");
+
+        for path in paths {
+            let path = path.expect("Failed to read path").path();
+            if path.extension().unwrap_or_default() == "torrent" {
+                println!("Parsing torrent file: {path:?}");
+
+                let mut file = std::fs::File::open(&path).expect("Failed to open torrent file");
+                let mut bytes = Vec::new();
+
+                file.read_to_end(&mut bytes)
+                    .expect("Failed to read torrent file to end");
+
+                match de::from_bytes::<Torrent>(&bytes) {
+                    Ok(t) => {
+                        render_torrent(&t);
+                        println!();
+                    }
+                    Err(e) => {
+                        panic!("ERROR: {}", e)
+                    }
+                }
+            }
+        }
+    }
+}
