@@ -9,11 +9,16 @@ use torrust_serde_bencode::ser::{to_bytes, to_string, Serializer};
 use torrust_serde_bencode::value::Value;
 
 fn test_value_ser_de<T: Into<Value>>(a: T) {
+    // Serialize
     let a = a.into();
     let mut ser = Serializer::new();
     a.serialize(&mut ser).unwrap();
     println!("bytes: {:?}", String::from_utf8_lossy(ser.as_ref()));
+
+    // Deserialize
     let b: Value = from_bytes(ser.as_ref()).unwrap();
+    println!("value: {b:?}");
+
     assert_eq!(a, b);
 }
 
@@ -267,26 +272,59 @@ fn deserialize_to_value_struct_mix() {
 }
 
 #[test]
-#[ignore]
-fn deserialize_to_nested_list() {
-    // [
-    //   [
-    //     "188.163.121.224",
-    //     56711
-    //   ],
-    //   [
-    //     "162.250.131.26",
-    //     13386
-    //   ]
-    // ]
+fn ser_de_nested_list_with_mixed_types_in_child_list() {
+    let nested_list_with_mixed_types = Value::List(vec![
+        Value::List(vec![
+            Value::Bytes("188.163.121.224".as_bytes().to_vec()),
+            Value::Int(56711),
+        ]),
+        Value::List(vec![
+            Value::Bytes("162.250.131.26".as_bytes().to_vec()),
+            Value::Int(13386),
+        ]),
+    ]);
 
+    test_value_ser_de(nested_list_with_mixed_types);
+}
+
+#[test]
+fn serialize_nested_list_with_mixed_types_in_child_list() {
+    let n = vec![
+        ("188.163.121.224".to_string(), 56711),
+        ("162.250.131.26".to_string(), 13386),
+    ];
+
+    assert_eq!(
+        to_string(&n).unwrap(),
+        "ll15:188.163.121.224i56711eel14:162.250.131.26i13386eee"
+    );
+}
+
+#[test]
+fn serialize_nested_list_with_integers_in_child_list() {
+    let n = vec![(56711), (13386)];
+
+    assert_eq!(to_string(&n).unwrap(), "li56711ei13386ee");
+}
+
+#[test]
+fn serialize_nested_list_with_two_integers_in_child_list() {
+    let n = vec![(111, 222), (333, 444)];
+
+    // cspell:disable-next-line
+    assert_eq!(to_string(&n).unwrap(), "lli111ei222eeli333ei444eee");
+}
+
+#[test]
+#[ignore]
+fn deserialize_to_nested_list_with_mixed_types_in_child_list() {
     #[derive(PartialEq, Debug, Deserialize)]
     struct Item {
         ip: String,
         port: i64,
     }
 
-    let b = "d1:0l15:188.163.121.224i56711ee1:1l14:162.250.131.26i13386eee";
+    let b = "ll15:188.163.121.224i56711eel14:162.250.131.26i13386eee";
 
     let r: Vec<Item> = from_str(b).unwrap();
 
@@ -303,6 +341,43 @@ fn deserialize_to_nested_list() {
             }
         ]
     );
+}
+
+#[test]
+#[ignore]
+fn deserialize_to_nested_list_with_integer_list_items() {
+    #[derive(PartialEq, Debug, Deserialize)]
+    struct Item {
+        port: i64,
+    }
+
+    // cspell:disable-next-line
+    let b = "lli56711eeli13386eee";
+
+    let r: Vec<Item> = from_str(b).unwrap();
+
+    assert_eq!(r, vec![Item { port: 56711 }, Item { port: 13386 }]);
+}
+
+#[test]
+#[ignore]
+fn deserialize_to_nested_list_with_child_lists_with_two_integers() {
+    #[derive(PartialEq, Debug, Deserialize)]
+    struct Item {
+        x: i64,
+        y: i64,
+    }
+
+    // cspell:disable-next-line
+    let b = "lli111ei222eeli333ei444eee";
+    //            "l                        e"; // parent list
+    //            " li111ei222ee             "; // first child list
+    //            "             li333ei444ee "; // second child list
+    //            "  i111ei222e  i333ei444e  "; // integers
+
+    let r: Vec<Item> = from_str(b).unwrap();
+
+    assert_eq!(r, vec![Item { x: 111, y: 222 }, Item { x: 333, y: 444 }]);
 }
 
 #[test]
