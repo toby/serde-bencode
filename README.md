@@ -1,5 +1,7 @@
 # serde-bencode
 
+**Archived:** I no longer maintain this repo as I've moved to [Go full-time](https://charm.sh). Please see [torrust/torrust-serde-bencode](https://github.com/torrust/torrust-serde-bencode) for a maintained fork.
+
 A [Serde](https://github.com/serde-rs/serde) backed [Bencode](https://en.wikipedia.org/wiki/Bencode)
 encoding/decoding library for Rust.
 
