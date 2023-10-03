@@ -21,7 +21,7 @@ fn unexpected<T>(unexp: de::Unexpected<'_>) -> Result<T> {
 /// StringSerializer for serializing *just* strings (bytes are also strings in bencode).
 /// The string is returned as Result<Vec<u8>>::Ok without any prefixing (without bencode string
 /// length prefix).
-// TODO: This should be pub(crate).
+// todo: This should be pub(crate).
 pub struct Serializer;
 
 impl<'a> ser::Serializer for &'a mut Serializer {
