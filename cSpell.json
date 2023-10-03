@@ -5,8 +5,10 @@
         "Duckburg",
         "httpseeds",
         "Krpc",
+        "lcov",
         "libfuzzer",
         "newtype",
+        "rustflags",
         "Serde",
         "Walke"
     ],
