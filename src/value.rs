@@ -157,3 +157,665 @@ impl From<HashMap<Vec<u8>, Value>> for Value {
         Value::Dict(v)
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    fn assert_bytes_eq(actual: &[u8], expected: &[u8]) {
+        assert_eq!(
+            actual,
+            expected,
+            "expected {:?} to equal {:?}",
+            String::from_utf8_lossy(actual),
+            String::from_utf8_lossy(expected)
+        );
+    }
+
+    mod it_should_be_converted_from {
+        use std::collections::HashMap;
+
+        use crate::value::Value;
+
+        #[test]
+        fn an_i64() {
+            let value: Value = 11i64.into();
+            assert_eq!(value, Value::Int(11));
+        }
+
+        #[test]
+        fn a_string() {
+            let value: Value = "11".into();
+            assert_eq!(value, Value::Bytes(b"11".to_vec()));
+        }
+
+        #[test]
+        fn a_str_reference() {
+            let value: Value = "11".to_string().into();
+            assert_eq!(value, Value::Bytes(b"11".to_vec()));
+        }
+
+        #[test]
+        fn a_byte_vector() {
+            let value: Value = vec![b'1', b'1'].into();
+            assert_eq!(value, Value::Bytes(b"11".to_vec()));
+        }
+
+        #[test]
+        fn a_vector_of_other_values() {
+            let value: Value = vec![Value::Bytes(b"11".to_vec())].into();
+            assert_eq!(value, Value::List(vec!(Value::Bytes(b"11".to_vec()))));
+        }
+
+        #[test]
+        fn a_hash_map_of_other_values() {
+            let value: Value = HashMap::from([(b"key".to_vec(), Value::Int(3))]).into();
+            assert_eq!(
+                value,
+                Value::Dict(HashMap::from([(b"key".to_vec(), Value::Int(3))]))
+            );
+        }
+    }
+
+    mod for_serialization_and_deserialization_of_a {
+        mod byte_string {
+
+            mod empty {
+                use crate::{from_bytes, Serializer};
+
+                use crate::value::tests::assert_bytes_eq;
+                use crate::value::Value;
+                use serde::Serialize;
+
+                #[test]
+                fn serialization() {
+                    let mut ser = Serializer::new();
+
+                    let value = Value::Bytes(b"".to_vec());
+                    let _unused = value.serialize(&mut ser);
+
+                    assert_bytes_eq(ser.as_ref(), b"0:");
+                }
+
+                #[test]
+                fn deserialization() {
+                    let value: Value = from_bytes(b"0:").unwrap();
+
+                    assert_eq!(value, Value::Bytes(b"".to_vec()));
+                }
+            }
+
+            mod non_empty {
+                use crate::{from_bytes, Serializer};
+
+                use crate::value::tests::assert_bytes_eq;
+                use crate::value::Value;
+                use serde::Serialize;
+
+                #[test]
+                fn serialization() {
+                    let mut ser = Serializer::new();
+
+                    let value = Value::Bytes(b"spam".to_vec());
+                    let _unused = value.serialize(&mut ser);
+
+                    assert_bytes_eq(ser.as_ref(), b"4:spam");
+                }
+
+                #[test]
+                fn deserialization() {
+                    let value: Value = from_bytes(b"4:spam").unwrap();
+
+                    assert_eq!(value, Value::Bytes(b"spam".to_vec()));
+                }
+            }
+        }
+
+        mod integer {
+
+            mod positive {
+                use serde::Serialize;
+
+                use crate::{
+                    from_bytes,
+                    value::{tests::assert_bytes_eq, Value},
+                    Serializer,
+                };
+
+                #[test]
+                fn serialization() {
+                    let mut ser = Serializer::new();
+
+                    let value = Value::Int(3);
+                    let _unused = value.serialize(&mut ser);
+
+                    assert_bytes_eq(ser.as_ref(), b"i3e");
+                }
+
+                #[test]
+                fn deserialization() {
+                    let value: Value = from_bytes(b"i3e").unwrap();
+
+                    assert_eq!(value, Value::Int(3));
+                }
+            }
+
+            mod negative {
+                use serde::Serialize;
+
+                use crate::{
+                    from_bytes,
+                    value::{tests::assert_bytes_eq, Value},
+                    Serializer,
+                };
+
+                #[test]
+                fn serialization() {
+                    let mut ser = Serializer::new();
+
+                    let value = Value::Int(-3);
+                    let _unused = value.serialize(&mut ser);
+
+                    assert_bytes_eq(ser.as_ref(), b"i-3e");
+                }
+
+                #[test]
+                fn deserialization() {
+                    let value: Value = from_bytes(b"i-3e").unwrap();
+
+                    assert_eq!(value, Value::Int(-3));
+                }
+            }
+        }
+
+        mod list {
+
+            mod empty {
+                use serde::Serialize;
+
+                use crate::{
+                    from_bytes,
+                    value::{tests::assert_bytes_eq, Value},
+                    Serializer,
+                };
+
+                #[test]
+                fn serialization() {
+                    let mut ser = Serializer::new();
+
+                    let value = Value::List(vec![]);
+                    let _unused = value.serialize(&mut ser);
+
+                    assert_bytes_eq(ser.as_ref(), b"le");
+                }
+
+                #[test]
+                fn deserialization() {
+                    let value: Value = from_bytes(b"le").unwrap();
+
+                    assert_eq!(value, Value::List(vec![]));
+                }
+            }
+
+            mod with_integers {
+
+                mod with_one_integer {
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::List(vec![Value::Int(3)]);
+                        let _unused = value.serialize(&mut ser);
+
+                        assert_bytes_eq(ser.as_ref(), b"li3ee");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        let value: Value = from_bytes(b"li3ee").unwrap();
+
+                        assert_eq!(value, Value::List(vec![Value::Int(3)]));
+                    }
+                }
+
+                mod with_multiple_integers {
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::List(vec![Value::Int(1), Value::Int(2)]);
+                        let _unused = value.serialize(&mut ser);
+
+                        assert_bytes_eq(ser.as_ref(), b"li1ei2ee");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        let value: Value = from_bytes(b"li1ei2ee").unwrap();
+
+                        assert_eq!(value, Value::List(vec![Value::Int(1), Value::Int(2)]));
+                    }
+                }
+            }
+
+            mod with_byte_strings {
+
+                mod empty {
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::List(vec![Value::Bytes(b"".to_vec())]);
+                        let _unused = value.serialize(&mut ser);
+
+                        assert_bytes_eq(ser.as_ref(), b"l0:e");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        let value: Value = from_bytes(b"l0:e").unwrap();
+
+                        assert_eq!(value, Value::List(vec![Value::Bytes(b"".to_vec())]));
+                    }
+                }
+
+                mod one_string {
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::List(vec![Value::Bytes(b"spam".to_vec())]);
+                        let _unused = value.serialize(&mut ser);
+
+                        // cspell: disable-next-line
+                        assert_bytes_eq(ser.as_ref(), b"l4:spame");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        // cspell: disable-next-line
+                        let value: Value = from_bytes(b"l4:spame").unwrap();
+
+                        assert_eq!(value, Value::List(vec![Value::Bytes(b"spam".to_vec())]));
+                    }
+                }
+
+                mod multiple_strings {
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::List(vec![
+                            Value::Bytes(b"spam1".to_vec()),
+                            Value::Bytes(b"spam1".to_vec()),
+                        ]);
+                        let _unused = value.serialize(&mut ser);
+
+                        assert_bytes_eq(ser.as_ref(), b"l5:spam15:spam1e");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        let value: Value = from_bytes(b"l5:spam15:spam1e").unwrap();
+
+                        assert_eq!(
+                            value,
+                            Value::List(vec![
+                                Value::Bytes(b"spam1".to_vec()),
+                                Value::Bytes(b"spam1".to_vec()),
+                            ])
+                        );
+                    }
+                }
+            }
+
+            mod with_dictionaries {
+
+                mod empty {
+
+                    use std::collections::HashMap;
+
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::List(vec![Value::Dict(HashMap::new())]);
+                        let _unused = value.serialize(&mut ser);
+
+                        // cspell: disable-next-line
+                        assert_bytes_eq(ser.as_ref(), b"ldee");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        // cspell: disable-next-line
+                        let value: Value = from_bytes(b"ldee").unwrap();
+
+                        assert_eq!(value, Value::List(vec![Value::Dict(HashMap::new())]));
+                    }
+                }
+
+                mod non_empty {
+                    use std::collections::HashMap;
+
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::List(vec![Value::Dict(HashMap::from([(
+                            b"key".to_vec(),
+                            Value::Int(3),
+                        )]))]);
+                        let _unused = value.serialize(&mut ser);
+
+                        // cspell: disable-next-line
+                        assert_bytes_eq(ser.as_ref(), b"ld3:keyi3eee");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        // cspell: disable-next-line
+                        let value: Value = from_bytes(b"ld3:keyi3eee").unwrap();
+
+                        assert_eq!(
+                            value,
+                            Value::List(vec![Value::Dict(HashMap::from([(
+                                b"key".to_vec(),
+                                Value::Int(3),
+                            )]))])
+                        );
+                    }
+                }
+            }
+        }
+
+        mod dictionary {
+
+            mod empty {
+                use std::collections::HashMap;
+
+                use serde::Serialize;
+
+                use crate::{
+                    from_bytes,
+                    value::{tests::assert_bytes_eq, Value},
+                    Serializer,
+                };
+
+                #[test]
+                fn serialization() {
+                    let mut ser = Serializer::new();
+
+                    let value = Value::Dict(HashMap::new());
+                    let _unused = value.serialize(&mut ser);
+
+                    assert_bytes_eq(ser.as_ref(), b"de");
+                }
+
+                #[test]
+                fn deserialization() {
+                    let value: Value = from_bytes(b"de").unwrap();
+
+                    assert_eq!(value, Value::Dict(HashMap::new()));
+                }
+            }
+
+            mod with_integer_keys {
+                mod one_key {
+                    use std::collections::HashMap;
+
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::Dict(HashMap::from([(b"key".to_vec(), Value::Int(3))]));
+                        let _unused = value.serialize(&mut ser);
+
+                        // cspell: disable-next-line
+                        assert_bytes_eq(ser.as_ref(), b"d3:keyi3ee");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        // cspell: disable-next-line
+                        let value: Value = from_bytes(b"d3:keyi3ee").unwrap();
+
+                        assert_eq!(
+                            value,
+                            Value::Dict(HashMap::from([(b"key".to_vec(), Value::Int(3))]))
+                        );
+                    }
+                }
+
+                mod multiple_keys {
+                    use std::collections::HashMap;
+
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::Dict(HashMap::from([
+                            (b"key1".to_vec(), Value::Int(1)),
+                            (b"key2".to_vec(), Value::Int(2)),
+                        ]));
+                        let _unused = value.serialize(&mut ser);
+
+                        // cspell: disable-next-line
+                        assert_bytes_eq(ser.as_ref(), b"d4:key1i1e4:key2i2ee");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        // cspell: disable-next-line
+                        let value: Value = from_bytes(b"d4:key1i1e4:key2i2ee").unwrap();
+
+                        assert_eq!(
+                            value,
+                            Value::Dict(HashMap::from([
+                                (b"key1".to_vec(), Value::Int(1)),
+                                (b"key2".to_vec(), Value::Int(2)),
+                            ]))
+                        );
+                    }
+                }
+            }
+
+            mod with_byte_string_keys {
+                mod one_key {
+                    use std::collections::HashMap;
+
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::Dict(HashMap::from([(
+                            b"key".to_vec(),
+                            Value::Bytes(b"spam".to_vec()),
+                        )]));
+                        let _unused = value.serialize(&mut ser);
+
+                        // cspell: disable-next-line
+                        assert_bytes_eq(ser.as_ref(), b"d3:key4:spame");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        // cspell: disable-next-line
+                        let value: Value = from_bytes(b"d3:key4:spame").unwrap();
+
+                        assert_eq!(
+                            value,
+                            Value::Dict(HashMap::from([(
+                                b"key".to_vec(),
+                                Value::Bytes(b"spam".to_vec()),
+                            )]))
+                        );
+                    }
+                }
+
+                mod multiple_keys {
+                    use std::collections::HashMap;
+
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::Dict(HashMap::from([
+                            (b"key1".to_vec(), Value::Bytes(b"spam1".to_vec())),
+                            (b"key2".to_vec(), Value::Bytes(b"spam2".to_vec())),
+                        ]));
+                        let _unused = value.serialize(&mut ser);
+
+                        // cspell: disable-next-line
+                        assert_bytes_eq(ser.as_ref(), b"d4:key15:spam14:key25:spam2e");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        // cspell: disable-next-line
+                        let value: Value = from_bytes(b"d4:key15:spam14:key25:spam2e").unwrap();
+
+                        assert_eq!(
+                            value,
+                            Value::Dict(HashMap::from([
+                                (b"key1".to_vec(), Value::Bytes(b"spam1".to_vec())),
+                                (b"key2".to_vec(), Value::Bytes(b"spam2".to_vec())),
+                            ]))
+                        );
+                    }
+                }
+            }
+
+            mod with_list_keys {
+                mod empty {
+                    use std::collections::HashMap;
+
+                    use serde::Serialize;
+
+                    use crate::{
+                        from_bytes,
+                        value::{tests::assert_bytes_eq, Value},
+                        Serializer,
+                    };
+
+                    #[test]
+                    fn serialization() {
+                        let mut ser = Serializer::new();
+
+                        let value = Value::Dict(HashMap::from([(
+                            b"key".to_vec(),
+                            Value::List(vec![Value::Int(1)]),
+                        )]));
+                        let _unused = value.serialize(&mut ser);
+
+                        // cspell: disable-next-line
+                        assert_bytes_eq(ser.as_ref(), b"d3:keyli1eee");
+                    }
+
+                    #[test]
+                    fn deserialization() {
+                        // cspell: disable-next-line
+                        let value: Value = from_bytes(b"d3:keyli1eee").unwrap();
+
+                        assert_eq!(
+                            value,
+                            Value::Dict(HashMap::from([(
+                                b"key".to_vec(),
+                                Value::List(vec![Value::Int(1)]),
+                            )]))
+                        );
+                    }
+                }
+
+                mod non_empty {}
+            }
+        }
+    }
+}
