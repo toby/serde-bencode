@@ -9,7 +9,7 @@ use std::fmt::Display;
 use std::io::Error as IoError;
 use std::result::Result as StdResult;
 
-/// Alias for `Result<T, torrust_serde_bencode::Error>`.
+/// Alias for `Result<T, serde_bencode::Error>`.
 pub type Result<T> = StdResult<T, Error>;
 
 /// Represents all possible errors which can occur when serializing or deserializing bencode.

@@ -1,12 +1,12 @@
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde_bencode::de::{from_bytes, from_str};
+use serde_bencode::error::Result;
+use serde_bencode::ser::{to_bytes, to_string, Serializer};
+use serde_bencode::value::Value;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
-use torrust_serde_bencode::de::{from_bytes, from_str};
-use torrust_serde_bencode::error::Result;
-use torrust_serde_bencode::ser::{to_bytes, to_string, Serializer};
-use torrust_serde_bencode::value::Value;
 
 fn test_value_ser_de<T: Into<Value>>(a: T) {
     // Serialize
@@ -617,13 +617,13 @@ fn deserialize_too_long_byte_string() {
 }
 
 mod torrent_file {
+    use serde_bencode::de::{self, from_str};
+    use serde_bencode::ser::to_string;
     use serde_bytes::ByteBuf;
     use serde_derive::{Deserialize, Serialize};
     use std::fmt::Debug;
     use std::fs;
     use std::io::Read;
-    use torrust_serde_bencode::de::{self, from_str};
-    use torrust_serde_bencode::ser::to_string;
 
     #[test]
     fn serialization() {

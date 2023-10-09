@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate serde_derive;
 
+use serde_bencode::de;
 use serde_bytes::ByteBuf;
 use std::io::{self, Read};
-use torrust_serde_bencode::de;
 
 #[derive(Debug, Deserialize)]
 struct Node(String, i64);

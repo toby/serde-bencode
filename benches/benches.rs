@@ -5,9 +5,9 @@ extern crate test;
 extern crate serde_derive;
 
 use serde::Serialize;
+use serde_bencode::de::from_bytes;
+use serde_bencode::ser::Serializer;
 use test::Bencher;
-use torrust_serde_bencode::de::from_bytes;
-use torrust_serde_bencode::ser::Serializer;
 
 #[bench]
 fn ser_de_simple(b: &mut Bencher) {
