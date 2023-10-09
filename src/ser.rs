@@ -351,7 +351,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 ///
 /// # Examples
 /// ```
-/// # fn main() -> Result<(), torrust_serde_bencode::Error> {
+/// # fn main() -> Result<(), serde_bencode::Error> {
 /// use serde_derive::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -365,7 +365,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 ///     city: "Duckburg, Calisota".to_string(),
 /// };
 ///
-/// let bytes = torrust_serde_bencode::to_bytes(&address)?;
+/// let bytes = serde_bencode::to_bytes(&address)?;
 /// assert_eq!(
 ///     String::from_utf8(bytes).unwrap(),
 ///     "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke",
@@ -388,7 +388,7 @@ pub fn to_bytes<T: ser::Serialize>(b: &T) -> Result<Vec<u8>> {
 ///
 /// # Examples
 /// ```
-/// # fn main() -> Result<(), torrust_serde_bencode::Error> {
+/// # fn main() -> Result<(), serde_bencode::Error> {
 /// use serde_derive::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -403,7 +403,7 @@ pub fn to_bytes<T: ser::Serialize>(b: &T) -> Result<Vec<u8>> {
 /// };
 ///
 /// assert_eq!(
-///     torrust_serde_bencode::to_string(&address)?,
+///     serde_bencode::to_string(&address)?,
 ///     "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".to_string(),
 /// );
 /// # Ok(())

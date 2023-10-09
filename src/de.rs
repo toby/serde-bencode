@@ -345,7 +345,7 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
 ///
 /// # Examples
 /// ```
-/// # fn main() -> Result<(), torrust_serde_bencode::Error> {
+/// # fn main() -> Result<(), serde_bencode::Error> {
 /// use serde_derive::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -355,7 +355,7 @@ impl<'de, 'a, R: Read> de::Deserializer<'de> for &'a mut Deserializer<R> {
 /// }
 ///
 /// let encoded = "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".to_string();
-/// let decoded: Address = torrust_serde_bencode::from_str(&encoded)?;
+/// let decoded: Address = serde_bencode::from_str(&encoded)?;
 ///
 /// assert_eq!(
 ///     decoded,
@@ -384,7 +384,7 @@ where
 ///
 /// # Examples
 /// ```
-/// # fn main() -> Result<(), torrust_serde_bencode::Error> {
+/// # fn main() -> Result<(), serde_bencode::Error> {
 /// use serde_derive::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -394,7 +394,7 @@ where
 /// }
 ///
 /// let encoded = "d4:city18:Duckburg, Calisota6:street17:1313 Webfoot Walke".as_bytes();
-/// let decoded: Address = torrust_serde_bencode::from_bytes(&encoded)?;
+/// let decoded: Address = serde_bencode::from_bytes(&encoded)?;
 ///
 /// assert_eq!(
 ///     decoded,
