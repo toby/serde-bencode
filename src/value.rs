@@ -160,6 +160,11 @@ impl From<HashMap<Vec<u8>, Value>> for Value {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
+    use serde_test::{assert_tokens, Token};
+
+    use super::Value;
 
     fn assert_bytes_eq(actual: &[u8], expected: &[u8]) {
         assert_eq!(
@@ -168,6 +173,44 @@ mod tests {
             "expected {:?} to equal {:?}",
             String::from_utf8_lossy(actual),
             String::from_utf8_lossy(expected)
+        );
+    }
+
+    #[test]
+    fn test_ser_de_bytes() {
+        let int = Value::Bytes(b"1".to_vec());
+
+        assert_tokens(&int, &[Token::Bytes(b"1")]);
+    }
+
+    #[test]
+    fn test_ser_de_int() {
+        let int = Value::Int(1);
+        assert_tokens(&int, &[Token::I64(1)]);
+    }
+
+    #[test]
+    fn test_ser_de_list() {
+        let int = Value::List(vec![Value::Int(1)]);
+
+        assert_tokens(
+            &int,
+            &[Token::Seq { len: Some(1) }, Token::I64(1), Token::SeqEnd],
+        );
+    }
+
+    #[test]
+    fn test_ser_de_dict() {
+        let dict = Value::Dict(HashMap::from([(b"key".to_vec(), Value::Int(1))]));
+
+        assert_tokens(
+            &dict,
+            &[
+                Token::Map { len: Some(1) },
+                Token::Bytes(b"key"),
+                Token::I64(1),
+                Token::MapEnd,
+            ],
         );
     }
 
