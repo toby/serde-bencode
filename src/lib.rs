@@ -19,7 +19,8 @@
 //!     };
 //!
 //!     let serialized = serde_bencode::to_string(&apple)?;
-//!
+//!     
+//!     // cspell:disable-next-line
 //!     assert_eq!(serialized, "d4:name5:Apple5:pricei130ee".to_string());
 //!
 //!     let deserialized: Product = serde_bencode::from_str(&serialized)?;
@@ -36,11 +37,11 @@
 //! }
 //! ```
 
+pub mod de;
 pub mod error;
 pub mod ser;
-pub mod de;
 pub mod value;
 
+pub use de::{from_bytes, from_str, Deserializer};
 pub use error::{Error, Result};
 pub use ser::{to_bytes, to_string, Serializer};
-pub use de::{from_str, from_bytes, Deserializer};

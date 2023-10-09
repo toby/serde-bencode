@@ -1,13 +1,13 @@
 //! Structures used to handle errors when serializing or deserializing goes wrong.
 
+use serde::de::Error as DeError;
+use serde::de::{Expected, Unexpected};
+use serde::ser::Error as SerError;
+use std::error::Error as StdError;
 use std::fmt;
 use std::fmt::Display;
-use std::error::Error as StdError;
 use std::io::Error as IoError;
 use std::result::Result as StdResult;
-use serde::ser::Error as SerError;
-use serde::de::Error as DeError;
-use serde::de::{Unexpected, Expected};
 
 /// Alias for `Result<T, serde_bencode::Error>`.
 pub type Result<T> = StdResult<T, Error>;
@@ -25,7 +25,7 @@ pub enum Error {
     /// reason. For example, this error may occur when deserializing to a String but the input data
     /// is not valid UTF-8.
     InvalidValue(String),
-    
+
     /// Raised when deserializing a sequence or map, but the input data is the wrong length.
     InvalidLength(String),
 
@@ -61,36 +61,36 @@ impl DeError for Error {
         Error::Custom(msg.to_string())
     }
 
-    fn invalid_type(unexp: Unexpected, exp: &dyn Expected) -> Self {
-        Error::InvalidType(format!("Invalid Type: {} (expected: `{}`)", unexp, exp))
+    fn invalid_type(unexpected: Unexpected<'_>, exp: &dyn Expected) -> Self {
+        Error::InvalidType(format!("Invalid Type: {unexpected} (expected: `{exp}`)"))
     }
 
-    fn invalid_value(unexp: Unexpected, exp: &dyn Expected) -> Self {
-        Error::InvalidValue(format!("Invalid Value: {} (expected: `{}`)", unexp, exp))
+    fn invalid_value(unexpected: Unexpected<'_>, exp: &dyn Expected) -> Self {
+        Error::InvalidValue(format!("Invalid Value: {unexpected} (expected: `{exp}`)"))
     }
 
     fn invalid_length(len: usize, exp: &dyn Expected) -> Self {
-        Error::InvalidLength(format!("Invalid Length: {} (expected: {})", len, exp))
+        Error::InvalidLength(format!("Invalid Length: {len} (expected: {exp})"))
     }
 
     fn unknown_variant(field: &str, expected: &'static [&'static str]) -> Self {
-        Error::UnknownVariant(format!("Unknown Variant: `{}` (expected one of: {:?})",
-                                      field,
-                                      expected))
+        Error::UnknownVariant(format!(
+            "Unknown Variant: `{field}` (expected one of: {expected:?})"
+        ))
     }
 
     fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
-        Error::UnknownField(format!("Unknown Field: `{}` (expected one of: {:?})",
-                                    field,
-                                    expected))
+        Error::UnknownField(format!(
+            "Unknown Field: `{field}` (expected one of: {expected:?})"
+        ))
     }
 
     fn missing_field(field: &'static str) -> Self {
-        Error::MissingField(format!("Missing Field: `{}`", field))
+        Error::MissingField(format!("Missing Field: `{field}`"))
     }
 
     fn duplicate_field(field: &'static str) -> Self {
-        Error::DuplicateField(format!("Duplicat Field: `{}`", field))
+        Error::DuplicateField(format!("Duplicate Field: `{field}`"))
     }
 }
 
@@ -104,17 +104,17 @@ impl StdError for Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match *self {
-            Error::IoError(ref error) => {return error.fmt(f)},
-            Error::InvalidType(ref s) => s,
-            Error::InvalidValue(ref s) => s,
-            Error::InvalidLength(ref s) => s,
-            Error::UnknownVariant(ref s) => s,
-            Error::UnknownField(ref s) => s,
-            Error::MissingField(ref s) => s,
-            Error::DuplicateField(ref s) => s,
-            Error::Custom(ref s) => s,
+            Error::IoError(ref error) => return error.fmt(f),
+            Error::InvalidType(ref s)
+            | Error::InvalidValue(ref s)
+            | Error::InvalidLength(ref s)
+            | Error::UnknownVariant(ref s)
+            | Error::UnknownField(ref s)
+            | Error::MissingField(ref s)
+            | Error::DuplicateField(ref s)
+            | Error::Custom(ref s) => s,
             Error::EndOfStream => "End of stream",
         };
         f.write_str(message)
