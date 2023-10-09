@@ -11,7 +11,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-torrust-serde-bencode = "^0.2.3"
+torrust-serde-bencode = "^0.2.4"
 serde = "^1.0.0"
 serde_derive = "^1.0.0"
 ```

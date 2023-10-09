@@ -1,7 +1,7 @@
 [package]
 name = "serde_bencode"
 description = "A Serde backed Bencode encoding/decoding library for Rust."
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Toby Padilla <tobypadilla@gmail.com>", "Nautilus Cyberneering <info@nautilus-cyberneering.de>"]
 repository = "https://github.com/toby/serde-bencode"
 documentation = "https://docs.rs/serde_bencode/"
